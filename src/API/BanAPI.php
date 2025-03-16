@@ -153,10 +153,7 @@ class BanAPI{
 				$output .= "Command ran as " . $player->username . ".\n";
 				break;
 			case "op":
-				if(!isset($params[0])){
-					$output .= "Usage: /op <player>\n";
-					break;
-				}
+				if(!isset($params[0])) return "Usage: /op <player>\n";
 				$user = strtolower($params[0]);
 				$player = $this->server->api->player->get($user);
 				if(!($player instanceof Player)){
@@ -171,10 +168,8 @@ class BanAPI{
 				$this->server->api->chat->sendTo(false, "You are now op.", $player->iusername);
 				break;
 			case "deop":
-				if(!isset($params[0])){
-					$output .= "Usage: /deop <player>\n";
-					break;
-				}
+				if(!isset($params[0])) return "Usage: /deop <player>\n";
+
 				$user = strtolower($params[0]);
 				$player = $this->server->api->player->get($user);
 				if(!($player instanceof Player)){
@@ -253,13 +248,14 @@ class BanAPI{
 				switch($p){
 					case "pardon":
 					case "remove":
+						if(!isset($params[0])) return "Ussage: /banip remove <ip>";
 						$ip = strtolower($params[0]);
 						$this->bannedIPs->remove($ip);
 						$this->bannedIPs->save();
-						$output .= "IP \"$ip\" removed from ban list\n";
-						break;
+						return "IP \"$ip\" removed from ban list\n";
 					case "add":
 					case "ban":
+						if(!isset($params[0])) return "Ussage: /banip add <username>";
 						$ip = strtolower($params[0]);
 						$player = $this->server->api->player->get($ip);
 						if($player instanceof Player){
@@ -268,17 +264,14 @@ class BanAPI{
 						}
 						$this->bannedIPs->set($ip);
 						$this->bannedIPs->save();
-						$output .= "IP \"$ip\" added to ban list\n";
-						break;
+						return "IP \"$ip\" added to ban list\n";
 					case "reload":
 						$this->bannedIPs = new Config(DATA_PATH . "banned-ips.txt", CONFIG_LIST);
-						break;
+						return "Reloaded banned ips list";
 					case "list":
-						$output .= "IP ban list: " . implode(", ", $this->bannedIPs->getAll(true)) . "\n";
-						break;
+						return "IP ban list: " . implode(", ", $this->bannedIPs->getAll(true)) . "\n";
 					default:
-						$output .= "Usage: /banip <add|remove|list|reload> [IP|player]\n";
-						break;
+						return "Usage: /banip <add|remove|list|reload> [IP|player]\n";
 				}
 				break;
 			case "ban":
@@ -286,13 +279,14 @@ class BanAPI{
 				switch($p){
 					case "pardon":
 					case "remove":
+						if(!isset($params[0])) return "Ussage: /ban remove <username>";
 						$user = strtolower($params[0]);
 						$this->banned->remove($user);
 						$this->banned->save();
-						$output .= "Player \"$user\" removed from ban list\n";
-						break;
+						return "Player \"$user\" removed from ban list\n";
 					case "add":
 					case "ban":
+						if(!isset($params[0])) return "Ussage: /ban add <username>";
 						$user = strtolower($params[0]);
 						$this->banned->set($user);
 						$this->banned->save();
@@ -306,17 +300,14 @@ class BanAPI{
 							$this->server->api->chat->broadcast($user . " has been banned\n");
 						}
 						$this->kick($user, "Banned");
-						$output .= "Player \"$user\" added to ban list\n";
-						break;
+						return "Player \"$user\" added to ban list\n";
 					case "reload":
 						$this->banned = new Config(DATA_PATH . "banned.txt", CONFIG_LIST);
-						break;
+						return "Reloaded banned players list";
 					case "list":
-						$output .= "Ban list: " . implode(", ", $this->banned->getAll(true)) . "\n";
-						break;
+						return "Ban list: " . implode(", ", $this->banned->getAll(true)) . "\n";
 					default:
-						$output .= "Usage: /ban <add|remove|list|reload> [username]\n";
-						break;
+						return "Usage: /ban <add|remove|list|reload> [username]\n";
 				}
 				break;
 		}
