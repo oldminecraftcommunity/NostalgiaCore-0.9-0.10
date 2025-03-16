@@ -280,7 +280,7 @@ class EntityAPI{
 				$item->count = min($item->getMaxStackSize(), $count);
 				$count -= $item->count;
 				$e = $this->add($pos->level, ENTITY_ITEM, $item->getID(), $data);
-				$e->delayBeforePickup = $pickupDelay;
+				$e->delayBeforePickup = (int) $pickupDelay;
 				$this->spawnToAll($e);
 				$this->server->api->handle("entity.motion", $e);
 			}
