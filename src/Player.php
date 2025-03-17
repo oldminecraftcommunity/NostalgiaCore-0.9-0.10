@@ -62,7 +62,6 @@ class Player{
 	private $lagStat = 0;
 	private $spawnPosition;
 	private $packetLoss = 0;
-	private $lastChunk = false;
 	private $bigCnt;
 	private $packetStats;
 	private $chunkCount = [];
@@ -478,44 +477,6 @@ class Player{
 		
 	}
 	
-	public function loadAllChunks(){
-		for($x = 0; $x < 16; $x++){
-			for($z = 0; $z < 16; $z++){
-				$this->useChunk($x, $z);
-			}
-		}
-	}
-	
-	public function useChunk($X, $Z){
-		$Yndex = 0;
-		for($iY = 0; $iY < 8; ++$iY){
-			if(isset($this->chunksOrder["$X:$Z"])){
-				unset($this->chunksOrder["$X:$Z"]);
-				$this->chunksLoaded["$X:$Z"] = true;
-				$Yndex |= 1 << $iY;
-			}
-		}
-		
-		/*$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '" . $this->level->getName() . "' AND x >= " . (($X << 4) - 1) . " AND x < " . (($X << 4) + 17) . " AND z >= " . (($Z << 4) - 1) . " AND z < " . (($Z << 4) + 17) . ";");
-		$this->lastChunk = false;
-		if($tiles !== false and $tiles !== true){
-			while(($tile = $tiles->fetchArray(SQLITE3_ASSOC)) !== false){
-				$tile = $this->server->api->tile->getByID($tile["ID"]);
-				if($tile instanceof Tile){
-					$tile->spawn($this);
-				}
-			}
-		}*/
-		//$this->stopUsingChunk($X, $Z); //just in case
-		$pk = new FullChunkDataPacket;
-		$pk->chunkX = $X;
-		$pk->chunkZ = $Z;
-		$pk->data = $this->level->getOrderedFullChunk($X, $Z);
-		$cnt = $this->dataPacket($pk);
-		if($cnt === false){
-			return false;
-		}
-	}
 	public $chunkTicker = 0;
 	public function entityTick(){
 		//ConsoleAPI::debug("{$this->username}, cl: ".count($this->chunksLoaded).", oc: ".count($this->chunksOrder));
@@ -542,20 +503,16 @@ class Player{
 				unset($this->chunkCount[$count]);
 			}
 		}
-
+		
 		$c = key($this->chunksOrder);
 		$d = $c != null ? $this->chunksOrder[$c] : null;
-		if($c === null or $d === null){
-			return false;
-		}
+		if($c === null or $d === null) return false;
 		
 		unset($this->chunksOrder[$c]);
 		$this->chunksLoaded[$c] = true;
 		$id = explode(":", $c);
 		$X = $id[0];
 		$Z = $id[1];
-		$x = $X << 4;
-		$z = $Z << 4;
 		$this->level->useChunk($X, $Z, $this);
 		$this->chunksLoaded["$X:$Z"] = true;
 		
@@ -568,8 +525,6 @@ class Player{
 		foreach($cnt as $i => $count){
 			$this->chunkCount[$count] = true;
 		}
-
-		$this->lastChunk = [$x, $z];
 	}
 
 	/**
@@ -1607,9 +1562,6 @@ class Player{
 				}
 				break;
 			case ProtocolInfo::REQUEST_CHUNK_PACKET:
-				console("request x:".$packet->chunkX.", z: ".$packet->chunkZ." chunk");
-				//$this->useChunk($packet->chunkX, $packet->chunkZ);
-				//$this->lastChunk = [$packet->chunkX, $packet->chunkZ];
 				break;
 			case ProtocolInfo::UPDATE_BLOCK_PACKET:
 				$this->level->resendBlocksToPlayers[$this->CID]["{$packet->x}.{$packet->y}.{$packet->z}"] = true;

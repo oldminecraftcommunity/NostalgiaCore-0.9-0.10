@@ -160,11 +160,7 @@ class ServerAPI{
 		PocketMinecraftServer::$PACKET_READING_LIMIT = $this->getProperty("abort-reading-after-N-packets", PocketMinecraftServer::$PACKET_READING_LIMIT);
 		//Load advanced properties
 		define("DEBUG", $this->getProperty("debug", 1));
-		define("ADVANCED_CACHE", $this->getProperty("enable-advanced-cache", false));
 		//define("MAX_CHUNK_RATE", 20 / $this->getProperty("max-chunks-per-second", 8)); //Default rate ~512 kB/s
-		if(ADVANCED_CACHE == true){
-			console("[INFO] Advanced cache enabled");
-		}
 		MobSpawner::$spawnAnimals = $this->getProperty("spawn-animals");
 		MobSpawner::$spawnMobs = $this->getProperty("spawn-mobs");
 		PocketMinecraftServer::$chukSendDelay = $this->getProperty("chunk-send-delay-ticks");

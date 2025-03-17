@@ -643,9 +643,6 @@ class PMFLevel extends PMF{
 			$this->chunkChange[$index][$Y] = 0;
 		}
 		$this->chunkChange[$index][-1] = false;
-		//$this->locationTable[$index][0] = $bitmap;
-		//$this->seek($this->payloadOffset + ($index << 1));
-		//$this->write(Utils::writeShort($this->locationTable[$index][0]));
 		return true;
 	}
 
@@ -692,7 +689,6 @@ class PMFLevel extends PMF{
 
 		if($this->isChunkLoaded($X, $Z)){
 			return true;
-
 		}
 
 		$cp = $this->getChunkPath($X, $Z);
@@ -755,11 +751,9 @@ class PMFLevel extends PMF{
 		$this->chunks[$index][$Y] = str_repeat("\x00", 16384);
 		$this->chunkChange[$index][-1] = true;
 		$this->chunkChange[$index][$Y] = 16384;
-		//$this->locationTable[$index][0] |= 1 << $Y;
-		//$this->chunkInfo[$index][0] = str_repeat("\x00", 256);
-		//$this->chunkInfo[$index][1] = str_repeat("\x00\x85\xb2\x4a", 256);
 		return true;
 	}
+	
 	public function initCleanChunk($X, $Z){
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->chunks[$index])){
@@ -792,6 +786,7 @@ class PMFLevel extends PMF{
 			$this->setPopulated($X, $Z, false);
 		}
 	}
+	
 	public function setMiniChunk($X, $Z, $Y, $data){
 		if($this->isChunkLoaded($X, $Z) === false){
 			$this->loadChunk($X, $Z);
@@ -806,11 +801,7 @@ class PMFLevel extends PMF{
 		$this->locationTable[$index][0] |= 1 << $Y;
 		return true;
 	}
-	private function report(){
-		console("[ERROR] A weird error in PMFLevel just happeneed. Values: ");
-		var_dump(func_get_args());
-		console("[NOTICE] If you see this message, you should send the log with error to the devs.");
-	}
+	
 	public function getBlockIDsXZ($x, $z){
 		$X = $x >> 4;
 		$Z = $z >> 4;
@@ -819,9 +810,8 @@ class PMFLevel extends PMF{
 	}
 	
 	public function getBlockID($x, $y, $z){
-		if($y > 127 or $y < 0){
-			return 0;
-		}
+		if($y > 127 || $y < 0) return 0;
+		
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$Y = $y >> 4;
@@ -838,12 +828,8 @@ class PMFLevel extends PMF{
 	}
 
 	public function setBlockID($x, $y, $z, $block){
-		if($y >= 128 or $y < 0){
-			return false;
-		}
-		if($y > 127 or $y < 0){
-			return false;
-		}
+		if($y > 127 or $y < 0) return false;
+		
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$Y = $y >> 4;
@@ -951,14 +937,9 @@ class PMFLevel extends PMF{
 		$aX = $x & 0xf;
 		$aZ = $z & 0xf;
 		$aY = $y & 0xf;
-		#Need to fix. But idk how.
-		//if(is_array($this->chunks) && is_array($this->chunks[$index]) && is_string($this->chunks[$index][$Y])){ //PHP8 warn fix
-			$b = ord($this->chunks[$index][$Y][($aY + ($aX << 6) + ($aZ << 10))]);
-			$m = ord($this->chunks[$index][$Y][(($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10))]);
-		//}else{
-		//	$b = 0;
-		//	$m = 0;
-		//}
+		
+		$b = ord($this->chunks[$index][$Y][($aY + ($aX << 6) + ($aZ << 10))]);
+		$m = ord($this->chunks[$index][$Y][(($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10))]);
 
 		if(($y & 1) === 0){
 			$m = $m & 0x0F;

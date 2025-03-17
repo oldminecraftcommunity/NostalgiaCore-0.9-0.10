@@ -154,25 +154,22 @@ class Level{
 		$X = (int)$X;
 		$Z = (int)$Z;
         //todo: make asynchronous
-		if(!isset($this->level)){
-			return false;
-		}
+		if(!isset($this->level)) return false;
 		
 		$gen = $this->generatorType === 1 || !($X > 15 || $X < 0 || $Z > 15 || $Z < 0);
 		$orderedIds = "";
 		$orderedData = "";
-		$orderedSkyLight = ""; //str_repeat("\xff", 16*16*64);
-		$orderedLight = ""; //str_repeat("\xff", 16*16*64);
-		$orderedBiomeIds = ""; //
-		$orderedBiomeColors = ""; //str_repeat("\x00\x85\xb2\x4a", 256); // also PM 1.4
+		$orderedSkyLight = "";
+		$orderedLight = "";
+		$orderedBiomeIds = "";
+		$orderedBiomeColors = "";
 		$tileEntities = "";
+		
 		if($gen) $this->level->generateChunk($X, $Z, $this->generator);
-		if(!$this->level->isChunkPopulated($X, $Z)){
-			$this->level->unloadChunk($X, $Z);
-		}
-		if(!$this->level->isChunkLoaded($X, $Z)){
-			$this->level->loadChunk($X, $Z, true);
-		}
+		
+		if(!$this->level->isChunkPopulated($X, $Z)) $this->level->unloadChunk($X, $Z);
+		if(!$this->level->isChunkLoaded($X, $Z)) $this->level->loadChunk($X, $Z, true);
+		
 		$miniChunks = [];
 			
 		for($y = 0; $y < 8; ++$y){
@@ -185,7 +182,6 @@ class Level{
 
 		for ($i = 0; $i < 16; $i++){
 			for ($j = 0; $j < 16; $j++){
-				//$orderedBiomeColors .= GrassColor::getBlendedGrassColor($this, $j+$X*16, $i+$Z*16);
 				$bIndex = ($i << 6) + ($j << 10);
 				foreach($miniChunks as $chunk){
 					$orderedIds .= substr($chunk, $bIndex, 16);
@@ -323,10 +319,11 @@ class Level{
 
 	public function useChunk($X, $Z, Player $player){
 		//ConsoleAPI::debug("$player uses $X $Z");
-		if(!isset($this->usedChunks[$X . "." . $Z])){
-			$this->usedChunks[$X . "." . $Z] = [];
+		$ind = "$X.$Z";
+		if(!isset($this->usedChunks[$ind])){
+			$this->usedChunks[$ind] = [];
 		}
-		$this->usedChunks[$X . "." . $Z][$player->CID] = true;
+		$this->usedChunks[$ind][$player->CID] = true;
 		if(isset($this->level)){
 			$this->level->loadChunk($X, $Z);
 		}
@@ -429,9 +426,7 @@ class Level{
 				}
 				$block->position($pos);
 				$i = ($pos->x >> 4) . ":" . ($pos->y >> 4) . ":" . ($pos->z >> 4);
-				if(ADVANCED_CACHE == true){
-					Cache::remove("world:{$this->name}:" . ($pos->x >> 4) . ":" . ($pos->z >> 4));
-				}
+				
 				if(!isset($this->changedBlocks[$i])){
 					$this->changedBlocks[$i] = [];
 					$this->changedCount[$i] = 0;
@@ -541,9 +536,7 @@ class Level{
 					$this->changedBlocks[$i] = [];
 					$this->changedCount[$i] = 0;
 				}
-				if(ADVANCED_CACHE == true){
-					Cache::remove("world:{$this->name}:" . ($pos->x >> 4) . ":" . ($pos->z >> 4));
-				}
+				
 				$this->changedBlocks[$i][] = clone $block;
 				++$this->changedCount[$i];
 			}
@@ -572,10 +565,7 @@ class Level{
 		if(!isset($this->level)){
 			return false;
 		}
-		$this->changedCount[$X . ":" . $Y . ":" . $Z] = 4096;
-		if(ADVANCED_CACHE){
-			Cache::remove("world:{$this->name}:$X:$Z");
-		}
+		$this->changedCount["$X:$Y:$Z"] = 4096;
 		return $this->level->setMiniChunk($X, $Z, $Y, $data);
 	}
 
@@ -594,42 +584,10 @@ class Level{
 		if($force !== true and $this->isSpawnChunk($X, $Z)){
 			return false;
 		}
-		Cache::remove("world:{$this->name}:$X:$Z");
+		
 		return $this->level->unloadChunk($X, $Z, $this->server->saveEnabled);
 	}
 
-	public function getOrderedChunk($X, $Z, $Yndex){
-		if(!isset($this->level)){
-			return false;
-		}
-		if(ADVANCED_CACHE == true and $Yndex == 0xff){
-			$identifier = "world:{$this->name}:$X:$Z";
-			if(($cache = Cache::get($identifier)) !== false){
-				return $cache;
-			}
-		}
-
-
-		$raw = [];
-		for($Y = 0; $Y < 8; ++$Y){
-			if(($Yndex & (1 << $Y)) > 0){
-				$raw[$Y] = $this->level->getMiniChunk($X, $Z, $Y);
-			}
-		}
-
-		$ordered = "";
-		$flag = chr($Yndex);
-		for($j = 0; $j < 256; ++$j){
-			$ordered .= $flag;
-			foreach($raw as $mini){
-				$ordered .= substr($mini, $j << 5, 24); //16 + 8
-			}
-		}
-		if(ADVANCED_CACHE == true and $Yndex == 0xff){
-			Cache::add($identifier, $ordered, 60);
-		}
-		return $ordered;
-	}
 
 	public function getOrderedMiniChunk($X, $Z, $Y){
 		if(!isset($this->level)){
