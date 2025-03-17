@@ -186,4 +186,8 @@ class SuperflatGenerator implements LevelGenerator{
 	public function getSpawn(){
 		return new Vector3(128, $this->floorLevel, 128);
 	}
+	
+	public function preGenerateChunk($chunkX, $chunkZ){
+		return true;
+	}
 }

@@ -508,22 +508,23 @@ class Player{
 		$d = $c != null ? $this->chunksOrder[$c] : null;
 		if($c === null or $d === null) return false;
 		
-		unset($this->chunksOrder[$c]);
-		$this->chunksLoaded[$c] = true;
+		
 		$id = explode(":", $c);
 		$X = $id[0];
 		$Z = $id[1];
-		$this->level->useChunk($X, $Z, $this);
-		$this->chunksLoaded["$X:$Z"] = true;
-		
-		$pk = new FullChunkDataPacket;
-		$pk->chunkX = $X;
-		$pk->chunkZ = $Z;
-		$pk->data = $this->level->getOrderedFullChunk($X, $Z);
-		$cnt = $this->dataPacket($pk);
-		$this->chunkCount = [];
-		foreach($cnt as $i => $count){
-			$this->chunkCount[$count] = true;
+		if($this->level->useChunk($X, $Z, $this)){
+			unset($this->chunksOrder[$c]);
+			$this->chunksLoaded[$c] = true;
+			
+			$pk = new FullChunkDataPacket;
+			$pk->chunkX = $X;
+			$pk->chunkZ = $Z;
+			$pk->data = $this->level->getOrderedFullChunk($X, $Z);
+			$cnt = $this->dataPacket($pk);
+			$this->chunkCount = [];
+			foreach($cnt as $i => $count){
+				$this->chunkCount[$count] = true;
+			}
 		}
 	}
 

@@ -18,6 +18,7 @@ class PMFLevel extends PMF{
 	public $chunkInfo = [];
 	public $populated = [];
 	public $fakeLoaded = [];
+	
 	public function __construct($file, $blank = false){
 		if(is_array($blank)){
 			$this->create($file, 0);
@@ -47,7 +48,6 @@ class PMFLevel extends PMF{
 	private function createBlank(){
 		$this->saveData(false);
 		$this->locationTable = [];
-		//$cnt = pow($this->levelData["width"], 2);
 		$dirname = dirname($this->file) . "/chunks/";
 		if(!is_dir($dirname)){
 			@mkdir($dirname , 0755);
@@ -57,12 +57,6 @@ class PMFLevel extends PMF{
 			for($Z = 0; $Z < 16; ++$Z){
 				$index = $this->getIndex($X, $Z);
 				$this->initCleanChunk($X, $Z);
-				//$this->chunks[$index] = false;
-				//$this->chunkChange[$index] = false;
-				//$this->locationTable[$index] = [0 => 0,];
-				//$this->write(Utils::writeShort(0));
-				//$X = $Z = null;
-				//$this->getXZ($index, $X, $Z);
 				@file_put_contents($this->getChunkPath($X, $Z), gzdeflate("", PMF_LEVEL_DEFLATE_LEVEL));
 			}
 		}
@@ -672,10 +666,14 @@ class PMFLevel extends PMF{
 		if(isset($this->chunks[$index])){
 			return false;
 		}
+		$r = $generator->preGenerateChunk($X, $Z);
+		if(!$r) return false;
 		$this->initCleanChunk($X, $Z);
 		$this->fillFullChunk($X, $Z);
-		$generator->generateChunk($X, $Z);
+		$r = $generator->generateChunk($X, $Z);
+		if(!$r) return false;
 		$generator->populateChunk($X, $Z);
+		return true;
 	}
 	
 	public function fillFullChunk($X, $Z){
@@ -949,9 +947,21 @@ class PMFLevel extends PMF{
 		return [$b, $m];
 	}
 	
+	
+	public function waitForChunk($X, $Z){
+		ConsoleAPI::debug("Waiting for $X:$Z");
+		//TODO implement wait
+		
+	}
+	
 	public function createUnpopulatedChunk($X, $Z){
 		$this->initCleanChunk($X, $Z);
 		$this->level->generator->generateChunk($X, $Z);
+		
+		if($this->level->generator instanceof ThreadedGenerator){
+			$this->waitForChunk($X, $Z);
+		}
+		
 		$this->fakeLoaded[self::getIndex($X, $Z)] = "$X.$Z"; //TODO do not use string
 	}
 	

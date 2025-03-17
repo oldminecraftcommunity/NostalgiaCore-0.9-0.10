@@ -318,15 +318,24 @@ class Level{
 	}
 
 	public function useChunk($X, $Z, Player $player){
+		if(!isset($this->level)) return false;
+		
+		if($this->level->loadChunk($X, $Z, true) === false){
+			$this->level->generateChunk($X, $Z, $this->generator);
+		}
+		
+		
+		if(!$this->level->isChunkLoaded($X, $Z)) return false;
+		//if(!$this->level->isChunkPopulated($X, $Z)) return false;
+		
+		
 		//ConsoleAPI::debug("$player uses $X $Z");
 		$ind = "$X.$Z";
 		if(!isset($this->usedChunks[$ind])){
 			$this->usedChunks[$ind] = [];
 		}
 		$this->usedChunks[$ind][$player->CID] = true;
-		if(isset($this->level)){
-			$this->level->loadChunk($X, $Z);
-		}
+		return true;
 	}
 
 	public function freeAllChunks(Player $player){
@@ -439,6 +448,11 @@ class Level{
 	}
 	
 	public function onTick(PocketMinecraftServer $server){
+		
+		if($this->generator instanceof ThreadedGenerator){
+			$this->generator->getDataProvider()->tick($this->generator);
+		}
+		
 		//$ents = $server->api->entity->getAll($this);
 		if(!$this->stopTime) $this->time+=2;
 		foreach($this->entityList as $k => $e){

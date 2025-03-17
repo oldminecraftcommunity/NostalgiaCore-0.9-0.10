@@ -139,6 +139,8 @@ require_once(FILE_PATH . "/src/plugin/phar/PharUtils.php");
 
 require_once(FILE_PATH . "/src/world/generator/LevelGenerator.php");
 require_once(FILE_PATH . "/src/world/generator/NewLevelGenerator.php");
+require_once(FILE_PATH . "/src/world/generator/thread/ThreadedGenerator.php");
+
 
 require_once(FILE_PATH . "/src/world/generator/biome/BiomeDecorator.php");
 

@@ -8,6 +8,8 @@ interface LevelGenerator{
 
 	public function generateChunk($chunkX, $chunkZ);
 
+	public function preGenerateChunk($chunkX, $chunkZ);
+	
 	public function populateChunk($chunkX, $chunkZ);
 
 	public function populateLevel();

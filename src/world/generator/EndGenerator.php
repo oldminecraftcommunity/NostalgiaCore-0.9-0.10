@@ -131,6 +131,8 @@ class EndGenerator implements NewLevelGenerator{
 		return new Vector3(127.5, 128, 127.5);
 	}
 
-	public function populateLevel()
-	{}
+	public function populateLevel(){}
+	public function preGenerateChunk($chunkX, $chunkZ){
+		return true;
+	}
 }
