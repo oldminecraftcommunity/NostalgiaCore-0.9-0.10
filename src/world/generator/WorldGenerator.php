@@ -31,6 +31,13 @@ class WorldGenerator{
 
 	public function generate(){
 		$this->generator->init($this->level, $this->random);
+		
+		if($this->generator instanceof ThreadedGenerator){
+			$this->level->setSpawn($this->generator->getSpawn());
+			$this->generator->preGenerateChunk(0, 0);
+			return;
+		}
+		
 		for($Z = 0; $Z < $this->width; ++$Z){
 			for($X = 0; $X < $this->width; ++$X){
 				$this->generator->generateChunk($X, $Z);

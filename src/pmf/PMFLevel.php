@@ -950,17 +950,31 @@ class PMFLevel extends PMF{
 	
 	public function waitForChunk($X, $Z){
 		ConsoleAPI::debug("Waiting for $X:$Z");
-		//TODO implement wait
+		/**
+		 * @var ThreadedGenerator $gen
+		 */
+		$gen = $this->level->generator;
+		$dp = $gen->getDataProvider();
+		while(!$dp->isReady($X, $Z)){
+			$dp->tick($gen);
+			usleep(1000); //1ms main thread sleep
+		}
 		
 	}
 	
 	public function createUnpopulatedChunk($X, $Z){
+		
+		$r = $this->level->generator->preGenerateChunk($X, $Z);
+		if(!$r){
+			if($this->level->generator instanceof ThreadedGenerator){
+				$this->waitForChunk($X, $Z); //TODO dont want
+			}else{
+				ConsoleAPI::warn("pregenerate chunk returned false for non threaded gen?");
+			}
+		}
+		
 		$this->initCleanChunk($X, $Z);
 		$this->level->generator->generateChunk($X, $Z);
-		
-		if($this->level->generator instanceof ThreadedGenerator){
-			$this->waitForChunk($X, $Z);
-		}
 		
 		$this->fakeLoaded[self::getIndex($X, $Z)] = "$X.$Z"; //TODO do not use string
 	}

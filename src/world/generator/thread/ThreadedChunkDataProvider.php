@@ -13,7 +13,9 @@ abstract class ThreadedChunkDataProvider extends Threaded
 	public function request($X, $Z){
 		if(isset($this->requested["$X:$Z"])) return;
 		$this->requested["$X:$Z"] = true;
-		$this->thread->requested[] = [$X, $Z];
+		$this->thread->synchronized(function($t, $x, $z){
+			$t->requested[] = [$x, $z];
+		}, $this->thread, $X, $Z);
 	}
 	public $requested = [];
 	public $ready = [];
