@@ -24,7 +24,7 @@ require_once("NoiseGenerator.php");
 /***REM_END***/
 
 class NoiseGeneratorPerlin extends NoiseGenerator{
-	public static $grad3 = [
+	const grad3 = [
 		[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
 		[1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
 		[0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]

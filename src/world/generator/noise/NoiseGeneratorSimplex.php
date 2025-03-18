@@ -14,52 +14,23 @@ require_once("NoiseGeneratorPerlin.php");
  * http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf</a>
  */
 class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
-	protected static $SQRT_3;
-	protected static $SQRT_5;
-	protected static $F2;
-	protected static $G2;
-	protected static $G22;
-	protected static $F3;
-	protected static $G3;
-	protected static $F4;
-	protected static $G4;
-	protected static $G42;
-	protected static $G43;
-	protected static $G44;
-	protected static $grad4 = [[0, 1, 1, 1],[0, 1, 1, -1],[0, 1, -1, 1],[0, 1, -1, -1],
-		[0, -1, 1, 1],[0, -1, 1, -1],[0, -1, -1, 1],[0, -1, -1, -1],
-		[1, 0, 1, 1],[1, 0, 1, -1],[1, 0, -1, 1],[1, 0, -1, -1],
-		[-1, 0, 1, 1],[-1, 0, 1, -1],[-1, 0, -1, 1],[-1, 0, -1, -1],
-		[1, 1, 0, 1],[1, 1, 0, -1],[1, -1, 0, 1],[1, -1, 0, -1],
-		[-1, 1, 0, 1],[-1, 1, 0, -1],[-1, -1, 0, 1],[-1, -1, 0, -1],
-		[1, 1, 1, 0],[1, 1, -1, 0],[1, -1, 1, 0],[1, -1, -1, 0],
-		[-1, 1, 1, 0],[-1, 1, -1, 0],[-1, -1, 1, 0],[-1, -1, -1, 0]];
-	protected static $simplex = [
-		[0, 1, 2, 3],[0, 1, 3, 2],[0, 0, 0, 0],[0, 2, 3, 1],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[1, 2, 3, 0],
-		[0, 2, 1, 3],[0, 0, 0, 0],[0, 3, 1, 2],[0, 3, 2, 1],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[1, 3, 2, 0],
-		[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],
-		[1, 2, 0, 3],[0, 0, 0, 0],[1, 3, 0, 2],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[2, 3, 0, 1],[2, 3, 1, 0],
-		[1, 0, 2, 3],[1, 0, 3, 2],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[2, 0, 3, 1],[0, 0, 0, 0],[2, 1, 3, 0],
-		[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],
-		[2, 0, 1, 3],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[3, 0, 1, 2],[3, 0, 2, 1],[0, 0, 0, 0],[3, 1, 2, 0],
-		[2, 1, 0, 3],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[3, 1, 0, 2],[0, 0, 0, 0],[3, 2, 0, 1],[3, 2, 1, 0]];
+	const SQRT_3 = 1.7320508075688772;
+	const SQRT_5 = 2.23606797749979;
+	const F2 = 0.5 * (self::SQRT_3 - 1);
+	const G2 = (3 - self::SQRT_3) / 6;
+	const G22 = self::G2 * 2 - 1;
+	const F3 = 1/3;
+	const G3 = 1/6;
+	const F4 = (self::SQRT_5 - 1.0) / 4.0;
+	const G4 = (5.0 - self::SQRT_5) / 20.0;
+	const G42 = self::G4 * 2.0;
+	const G43 = self::G4 * 3.0;
+	const G44 = self::G4 * 4.0 - 1;
 	protected $offsetW;
 	
 	public function __construct(Random $random, $octaves){
 		parent::__construct($random, $octaves);
 		$this->offsetW = $random->nextFloat() * 256;
-		self::$SQRT_3 = sqrt(3);
-		self::$SQRT_5 = sqrt(5);
-		self::$F2 = 0.5 * (self::$SQRT_3 - 1);
-		self::$G2 = (3 - self::$SQRT_3) / 6;
-		self::$G22 = self::$G2 * 2.0 - 1;
-		self::$F3 = 1.0 / 3.0;
-		self::$G3 = 1.0 / 6.0;
-		self::$F4 = (self::$SQRT_5 - 1.0) / 4.0;
-		self::$G4 = (5.0 - self::$SQRT_5) / 20.0;
-		self::$G42 = self::$G4 * 2.0;
-		self::$G43 = self::$G4 * 3.0;
-		self::$G44 = self::$G4 * 4.0 - 1.0;
 	}
 	
 	protected static function dot2D($g, $x, $y){
@@ -80,11 +51,11 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 		$z += $this->offsetZ;
 		
 		// Skew the input space to determine which simplex cell we're in
-		$s = ($x + $y + $z) * self::$F3; // Very nice and simple skew factor for 3D
+		$s = ($x + $y + $z) * self::F3; // Very nice and simple skew factor for 3D
 		$i = floor($x + $s);
 		$j = floor($y + $s);
 		$k = floor($z + $s);
-		$t = ($i + $j + $k) * self::$G3;
+		$t = ($i + $j + $k) * self::G3;
 		$X0 = $i - $t; // Unskew the cell origin back to (x,y,z) space
 		$Y0 = $j - $t;
 		$Z0 = $k - $t;
@@ -151,15 +122,15 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 		// a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
 		// a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
 		// c = 1/6.
-		$x1 = $x0 - $i1 + self::$G3; // Offsets for second corner in (x,y,z) coords
-		$y1 = $y0 - $j1 + self::$G3;
-		$z1 = $z0 - $k1 + self::$G3;
-		$x2 = $x0 - $i2 + 2.0 * self::$G3; // Offsets for third corner in (x,y,z) coords
-		$y2 = $y0 - $j2 + 2.0 * self::$G3;
-		$z2 = $z0 - $k2 + 2.0 * self::$G3;
-		$x3 = $x0 - 1.0 + 3.0 * self::$G3; // Offsets for last corner in (x,y,z) coords
-		$y3 = $y0 - 1.0 + 3.0 * self::$G3;
-		$z3 = $z0 - 1.0 + 3.0 * self::$G3;
+		$x1 = $x0 - $i1 + self::G3; // Offsets for second corner in (x,y,z) coords
+		$y1 = $y0 - $j1 + self::G3;
+		$z1 = $z0 - $k1 + self::G3;
+		$x2 = $x0 - $i2 + 2.0 * self::G3; // Offsets for third corner in (x,y,z) coords
+		$y2 = $y0 - $j2 + 2.0 * self::G3;
+		$z2 = $z0 - $k2 + 2.0 * self::G3;
+		$x3 = $x0 - 1.0 + 3.0 * self::G3; // Offsets for last corner in (x,y,z) coords
+		$y3 = $y0 - 1.0 + 3.0 * self::G3;
+		$z3 = $z0 - 1.0 + 3.0 * self::G3;
 		
 		// Work out the hashed gradient indices of the four simplex corners
 		$ii = $i & 255;
@@ -176,7 +147,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n0 = 0.0;
 		}else{
 			$t0 *= $t0;
-			$n0 = $t0 * $t0 * self::dot3D(self::$grad3[$gi0], $x0, $y0, $z0);
+			$n0 = $t0 * $t0 * self::dot3D(self::grad3[$gi0], $x0, $y0, $z0);
 		}
 		
 		$t1 = 0.6 - $x1 * $x1 - $y1 * $y1 - $z1 * $z1;
@@ -184,7 +155,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n1 = 0.0;
 		}else{
 			$t1 *= $t1;
-			$n1 = $t1 * $t1 * self::dot3D(self::$grad3[$gi1], $x1, $y1, $z1);
+			$n1 = $t1 * $t1 * self::dot3D(self::grad3[$gi1], $x1, $y1, $z1);
 		}
 		
 		$t2 = 0.6 - $x2 * $x2 - $y2 * $y2 - $z2 * $z2;
@@ -192,7 +163,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n2 = 0.0;
 		}else{
 			$t2 *= $t2;
-			$n2 = $t2 * $t2 * self::dot3D(self::$grad3[$gi2], $x2, $y2, $z2);
+			$n2 = $t2 * $t2 * self::dot3D(self::grad3[$gi2], $x2, $y2, $z2);
 		}
 		
 		$t3 = 0.6 - $x3 * $x3 - $y3 * $y3 - $z3 * $z3;
@@ -200,7 +171,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n3 = 0.0;
 		}else{
 			$t3 *= $t3;
-			$n3 = $t3 * $t3 * self::dot3D(self::$grad3[$gi3], $x3, $y3, $z3);
+			$n3 = $t3 * $t3 * self::dot3D(self::grad3[$gi3], $x3, $y3, $z3);
 		}
 		
 		// Add contributions from each corner to get the noise value.
@@ -213,10 +184,10 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 		$y += $this->offsetY;
 		
 		// Skew the input space to determine which simplex cell we're in
-		$s = ($x + $y) * self::$F2; // Hairy factor for 2D
+		$s = ($x + $y) * self::F2; // Hairy factor for 2D
 		$i = floor($x + $s);
 		$j = floor($y + $s);
-		$t = ($i + $j) * self::$G2;
+		$t = ($i + $j) * self::G2;
 		$X0 = $i - $t; // Unskew the cell origin back to (x,y) space
 		$Y0 = $j - $t;
 		$x0 = $x - $X0; // The x,y distances from the cell origin
@@ -238,10 +209,10 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 		// a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
 		// c = (3-sqrt(3))/6
 		
-		$x1 = $x0 - $i1 + self::$G2; // Offsets for middle corner in (x,y) unskewed coords
-		$y1 = $y0 - $j1 + self::$G2;
-		$x2 = $x0 + self::$G22; // Offsets for last corner in (x,y) unskewed coords
-		$y2 = $y0 + self::$G22;
+		$x1 = $x0 - $i1 + self::G2; // Offsets for middle corner in (x,y) unskewed coords
+		$y1 = $y0 - $j1 + self::G2;
+		$x2 = $x0 + self::G22; // Offsets for last corner in (x,y) unskewed coords
+		$y2 = $y0 + self::G22;
 		
 		// Work out the hashed gradient indices of the three simplex corners
 		$ii = $i & 255;
@@ -256,7 +227,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n0 = 0.0;
 		}else{
 			$t0 *= $t0;
-			$n0 = $t0 * $t0 * self::dot2D(self::$grad3[$gi0], $x0, $y0); // (x,y) of grad3 used for 2D gradient
+			$n0 = $t0 * $t0 * self::dot2D(self::grad3[$gi0], $x0, $y0); // (x,y) of grad3 used for 2D gradient
 		}
 		
 		$t1 = 0.5 - $x1 * $x1 - $y1 * $y1;
@@ -264,7 +235,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n1 = 0.0;
 		}else{
 			$t1 *= $t1;
-			$n1 = $t1 * $t1 * self::dot2D(self::$grad3[$gi1], $x1, $y1);
+			$n1 = $t1 * $t1 * self::dot2D(self::grad3[$gi1], $x1, $y1);
 		}
 		
 		$t2 = 0.5 - $x2 * $x2 - $y2 * $y2;
@@ -272,7 +243,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 			$n2 = 0.0;
 		}else{
 			$t2 *= $t2;
-			$n2 = $t2 * $t2 * self::dot2D(self::$grad3[$gi2], $x2, $y2);
+			$n2 = $t2 * $t2 * self::dot2D(self::grad3[$gi2], $x2, $y2);
 		}
 		
 		// Add contributions from each corner to get the noise value.

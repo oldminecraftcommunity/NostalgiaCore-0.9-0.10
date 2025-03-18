@@ -89,10 +89,13 @@ class BiomeSelector
 	}
 	
 	public function pickBiome($x, $z){
+		return self::$biomes[$this->pickBiomeID($x, $z)] ?? $this->fallback;
+	}
+	public function pickBiomeID($x, $z){
 		$temperature = (int) ($this->getTemperature($x, $z) * 63);
 		$rainfall = (int) ($this->getRainfall($x, $z) * 63);
 		$biomeId = $this->map[$temperature + ($rainfall << 6)] ?? -1;
-		return self::$biomes[$biomeId] ?? $this->fallback;
+		return $biomeId;
 	}
 }
 

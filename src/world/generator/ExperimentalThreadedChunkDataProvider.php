@@ -19,13 +19,17 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 	public $gaussianKernel;
 	public static $SMOOTH_SIZE = 2;
 	
+	private static $biomes; //making it not static will autoconvert it to volatile which is bad
 	public function __construct($seed){
 		parent::__construct();
 		$this->levelSeed = $seed;
 		$this->random = new Random($seed);
 		$this->selector = new BiomeSelector($this->random, BiomeSelector::$biomes[BIOME_PLAINS]);
 		$this->noiseBase = new NoiseGeneratorPerlin($this->random, 4);
-		
+		$this->biomesvolatile = [];
+		foreach(BiomeSelector::$biomes as $k => $b){
+			$this->biomesvolatile[$k] = $b;
+		}
 	}
 	
 	public function generateKernel(){
@@ -43,6 +47,14 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 				$this->gaussianKernel[$sx + self::$SMOOTH_SIZE][$sz + self::$SMOOTH_SIZE] = $bellHeight * exp(-($bx * $bx + $bz * $bz) / 2);
 			}
 		}
+		
+		ThreadedBiomeSelector::saveState($this->selector); //using instances makes pickBiome 10x slower
+		$bs = $this->biomesvolatile;
+		self::$biomes = [];
+		foreach($bs as $id => $v){
+			self::$biomes[$id] = $v;
+		}
+		
 		$this->hasKernel = true;
 	}
 	
@@ -57,7 +69,7 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 		if($zNoise == 3){
 			$zNoise = 1;
 		}
-		return $this->selector->pickBiome($x + $xNoise - 1, $z + $zNoise - 1);
+		return self::$biomes[ThreadedBiomeSelector::pickBiomeID($x + $xNoise - 1, $z + $zNoise - 1)] ?? $this->selector->fallback; //$this->selector->pickBiomeID($x + $xNoise - 1, $z + $zNoise - 1)] ?? $this->selector->fallback;
 	}
 	
 	public function getChunkData($chunkX, $chunkZ){
@@ -68,11 +80,9 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->levelSeed);
 		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];
-		$data = [
-			
-		];
+		$data = [];
+		
 		for($chunkY = 0; $chunkY < 8; ++$chunkY){
-			console("gen $chunkY");
 			$chunk = "";
 			$biomes = ""; //TODO move out of chunkY loop
 			$startY = $chunkY << 4;
@@ -84,6 +94,7 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 					$weightSum = 0;
 					//$this->level->level->setBiomeId(($chunkX << 4) + $x, ($chunkZ << 4) + $z, $biome->id); //TODO biome array
 					
+					//if($chunkY == 0){
 					$biome = $this->pickBiome($chunkX * 16 + $x, $chunkZ * 16 + $z);
 					$biomes .= chr($biome->id);
 					for($sx = -self::$SMOOTH_SIZE; $sx <= self::$SMOOTH_SIZE; ++$sx){

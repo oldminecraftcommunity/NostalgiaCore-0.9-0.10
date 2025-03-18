@@ -73,12 +73,12 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 	public function populateChunk($chunkX, $chunkZ){
 		ConsoleAPI::debug("Populating $chunkX:$chunkZ");
 		$this->level->level->setPopulated($chunkX, $chunkZ, true);
-		/*$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
+		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
 		foreach($this->populators as $populator){
 			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
-		}*/
+		}
 		
-		/*$biomecolors = "";
+		$biomecolors = "";
 		for($z = 0; $z < 16; ++$z){
 			for($x = 0; $x < 16; ++$x){
 				$color = GrassColor::getBlendedGrassColor($this->level, ($chunkX*16)+$x, ($chunkZ*16)+$z);
@@ -86,7 +86,7 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 			}
 		}
 		
-		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);*/ //TODO makes everything slow due to wait
+		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 
 	public function getSettings(){}
@@ -108,7 +108,7 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 		for($i = 0; $i < 8; ++$i){
 			$this->level->setMiniChunk($chunkX, $chunkZ, $i, $data[$i]);
 		}
-		console(strlen($data["biomes"]));
+		
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, $data["biomes"]);
 		
 		
