@@ -71,7 +71,6 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 	}
 
 	public function populateChunk($chunkX, $chunkZ){
-		ConsoleAPI::debug("Populating $chunkX:$chunkZ");
 		$this->level->level->setPopulated($chunkX, $chunkZ, true);
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
 		foreach($this->populators as $populator){
@@ -96,13 +95,11 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 	
 	public function preGenerateChunk($chunkX, $chunkZ){
 		if($this->getDataProvider()->isReady($chunkX, $chunkZ)) return true;
-		ConsoleAPI::debug("Requesting $chunkX:$chunkZ");
 		$this->getDataProvider()->request($chunkX, $chunkZ);
 		
 		return false;
 	}
 	public function generateChunk($chunkX, $chunkZ){
-		ConsoleAPI::debug("Generation finished $chunkX:$chunkZ");
 		$data = $this->getDataProvider()->get($chunkX, $chunkZ);
 		
 		for($i = 0; $i < 8; ++$i){

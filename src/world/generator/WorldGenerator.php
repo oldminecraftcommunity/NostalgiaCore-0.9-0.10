@@ -33,9 +33,21 @@ class WorldGenerator{
 		$this->generator->init($this->level, $this->random);
 		
 		if($this->generator instanceof ThreadedGenerator){
+			ConsoleAPI::notice("Pregenerating spawn area...");
 			$this->level->setSpawn($this->generator->getSpawn());
-			$this->generator->preGenerateChunk(0, 0);
-			return;
+			for($Z = 0; $Z < $this->width; ++$Z){
+				for($X = 0; $X < $this->width; ++$X){
+					$this->generator->preGenerateChunk($X, $Z);
+				}
+			}
+			
+			while(count($this->generator->getDataProvider()->requested) > 0){
+				$t = count($this->generator->getDataProvider()->requested);
+				console("[NOTICE] Preparing level " . ceil(((256-$t) / 256) * 100) . "%");
+				$this->generator->getDataProvider()->tick($this->generator);
+				usleep(500000);
+			}
+			
 		}
 		
 		for($Z = 0; $Z < $this->width; ++$Z){

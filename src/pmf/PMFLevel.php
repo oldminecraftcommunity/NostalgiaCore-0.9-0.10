@@ -949,7 +949,6 @@ class PMFLevel extends PMF{
 	
 	
 	public function waitForChunk($X, $Z){
-		ConsoleAPI::debug("Waiting for $X:$Z");
 		/**
 		 * @var ThreadedGenerator $gen
 		 */
@@ -959,7 +958,6 @@ class PMFLevel extends PMF{
 			$dp->tick($gen);
 			usleep(1000); //1ms main thread sleep
 		}
-		
 	}
 	
 	public function createUnpopulatedChunk($X, $Z){

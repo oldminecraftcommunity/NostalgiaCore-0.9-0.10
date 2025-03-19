@@ -34,17 +34,23 @@ abstract class ThreadedChunkDataProvider extends Threaded
 			$arr = [];
 			foreach($this->thread->finished as $k => $v){
 				$arr[] = $this->thread->finished[$k];
-				unset($this->thread->finished[$k]);
 			}
-			return $arr;
+			return (array) $arr;
 		}, $this->thread);
 		
 		foreach($arr as $xzdata){
 			$X = $xzdata[0];
 			$Z = $xzdata[1];
-			$this->ready["$X:$Z"] = $xzdata[2];
+			
+			$this->ready["$X:$Z"] = (array) $xzdata[2];
 			unset($this->requested["$X:$Z"]);
 		}
+		
+		$this->synchronized(function($thread, $arr){
+			foreach($arr as $k => $v){
+				unset($this->thread->finished[$k]);
+			}
+		}, $this->thread, $arr);
 	}
 }
 
