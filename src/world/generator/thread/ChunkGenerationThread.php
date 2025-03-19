@@ -11,6 +11,7 @@ class ChunkGenerationThread extends Thread{
 		$this->provider = $provider;
 	}
 	public function run(){
+		$this->provider->threadInit();
 		cont:
 		if(count($this->requested) > 0){
 			$chunks = $this->synchronized(function(){

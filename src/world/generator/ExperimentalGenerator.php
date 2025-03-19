@@ -76,7 +76,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		));
 		$this->populators[] = $ores;
 		$this->genPopulators[] = new GroundCover();
-		$trees = new TreePopulator();
+		$trees = new BiomeBasedTreePopulator();
 		$trees->setBaseAmount(3);
 		$trees->setRandomAmount(0);
 		$this->populators[] = $trees;

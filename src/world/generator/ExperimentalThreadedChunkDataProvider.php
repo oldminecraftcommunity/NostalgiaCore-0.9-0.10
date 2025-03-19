@@ -30,9 +30,10 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 		foreach(BiomeSelector::$biomes as $k => $b){
 			$this->biomesvolatile[$k] = $b;
 		}
+		$this->startThread();
 	}
 	
-	public function generateKernel(){
+	public function threadInit(){
 		$this->gaussianKernel = [];
 		
 		$bellSize = 1 / self::$SMOOTH_SIZE;
@@ -73,10 +74,6 @@ class ExperimentalThreadedChunkDataProvider extends ThreadedChunkDataProvider
 	}
 	
 	public function getChunkData($chunkX, $chunkZ){
-		if(!$this->hasKernel){
-			ConsoleAPI::debug("Generate kernel");
-			$this->generateKernel();
-		}
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->levelSeed);
 		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];

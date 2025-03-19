@@ -5,10 +5,14 @@ abstract class ThreadedChunkDataProvider extends Threaded
 	public $thread;
 	public function __construct(){
 		$this->thread = new ChunkGenerationThread($this);
+	}
+	
+	public function startThread(){
 		$this->thread->start();
 	}
-	public abstract function getChunkData($X, $Z);
 	
+	public abstract function getChunkData($X, $Z);
+	public abstract function threadInit();
 	
 	public function request($X, $Z){
 		if(isset($this->requested["$X:$Z"])) return;

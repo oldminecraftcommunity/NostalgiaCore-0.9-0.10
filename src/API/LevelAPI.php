@@ -127,7 +127,7 @@ class LevelAPI{
 			"EXPERIMENTAL" => new ExperimentalGenerator($options),
 			"HELL", "NETHER" => new HellGenerator($options),
 			"END" => new EndGenerator($options),
-			"THREAD" => new TestGenerator($options),
+			"EXPERIMENTAL-THREADED" => new ExperimentalThreadedGenerator($options),
 			default => new NormalGenerator($options)
 		};
 	}

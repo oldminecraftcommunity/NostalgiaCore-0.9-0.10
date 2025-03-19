@@ -1,6 +1,6 @@
 <?php
 
-class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
+class ExperimentalThreadedGenerator implements NewLevelGenerator, ThreadedGenerator{
 	/**
 	 * @var Level
 	 */
@@ -52,7 +52,7 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 		));
 		$this->populators[] = $ores;
 		$this->genPopulators[] = new GroundCover();
-		$trees = new TreePopulator();
+		$trees = new BiomeBasedTreePopulator();
 		$trees->setBaseAmount(3);
 		$trees->setRandomAmount(0);
 		$this->populators[] = $trees;
@@ -108,12 +108,9 @@ class TestGenerator implements NewLevelGenerator, ThreadedGenerator{
 		
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, $data["biomes"]);
 		
-		
 		foreach($this->genPopulators as $pop){
 			$pop->populate($this->level, $chunkX, $chunkZ, $this->random);
 		}
-		
-		//$this->caveGenerator->generate($this->level, $chunkX, $chunkZ);
 	}
 
 	public function populateLevel(){}
