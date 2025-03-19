@@ -18,6 +18,7 @@ class PMFLevel extends PMF{
 	public $chunkInfo = [];
 	public $populated = [];
 	public $fakeLoaded = [];
+	public $justConverted = false;
 	public function __construct($file, $blank = false){
 		if(is_array($blank)){
 			$this->create($file, 0);
@@ -342,6 +343,7 @@ class PMFLevel extends PMF{
 					
 					ConsoleAPI::notice("Modifying level.pmf...");
 					$this->saveData(false);
+					$this->justConverted = true;
 					ConsoleAPI::notice("World converted. Reloading...");
 					break;
 				case 1:
@@ -392,6 +394,7 @@ class PMFLevel extends PMF{
 					
 					ConsoleAPI::notice("Modifying level.pmf...");
 					$this->saveData(false);
+					$this->justConverted = true;
 					ConsoleAPI::notice("World converted. Reloading...");
 					break;
 				case 2:
@@ -442,6 +445,7 @@ class PMFLevel extends PMF{
 					
 					ConsoleAPI::notice("Modifying level.pmf...");
 					$this->saveData(false);
+					$this->justConverted = true;
 					ConsoleAPI::notice("World converted. Reloading...");
 					break;
 			}

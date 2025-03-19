@@ -130,6 +130,7 @@ class Level{
 		$Z = $z >> 4;
 
 		//$gen = $this->generatorType === 1 || !($X > 15 || $X < 0 || $Z > 15 || $Z < 0);
+		
 		if(!$this->level->isChunkLoaded($X, $Z) && $this->level->loadChunk($X, $Z, false) === false){
 			$this->level->createUnpopulatedChunk($X, $Z);
 		}

@@ -40,6 +40,11 @@ class LevelAPI{
 		console("[INFO] Preparing level \"" . $name . "\"");
 		$level = new PMFLevel($path . "level.pmf");
 		if(!$level->isLoaded){
+			if($level->justConverted){
+				$level->close();
+				unset($level);
+				return $this->loadLevel($name);
+			}
 			console("[ERROR] Could not load level \"" . $name . "\"");
 			return false;
 		}
