@@ -1,28 +1,82 @@
 <?php
-
 set_time_limit(0);
+
+function parseOffset(string $offset) : string|false{
+	//Make signed offsets unsigned for date_parse
+	if(str_starts_with($offset, '-')){
+		$negative_offset = true;
+		$offset = str_replace('-', '', $offset);
+	}else{
+		if(str_starts_with($offset, '+')){
+			$negative_offset = false;
+			$offset = str_replace('+', '', $offset);
+		}else{
+			return false;
+		}
+	}
+
+	$parsed = date_parse($offset);
+	$offset = $parsed['hour'] * 3600 + $parsed['minute'] * 60 + $parsed['second'];
+
+	//After date_parse is done, put the sign back
+	if($negative_offset){
+		$offset = -abs($offset);
+	}
+
+	//And then, look the offset up.
+	//timezone_name_from_abbr is not used because it returns false on some(most) offsets because it's mapping function is weird.
+	//That's been a bug in PHP since 2008!
+	foreach(timezone_abbreviations_list() as $zones){
+		foreach($zones as $timezone){
+			if($timezone['timezone_id'] !== null && $timezone['offset'] == $offset){
+				return $timezone['timezone_id'];
+			}
+		}
+	}
+
+	return false;
+}
 
 if(ini_get("date.timezone") == ""){ //No Timezone set
 	date_default_timezone_set("GMT");
-	if(strpos(" " . strtoupper(php_uname("s")), " WIN") !== false){
-		$time = time();
-		$time -= $time % 60;
-		//TODO: Parse different time & date formats by region. ¬¬ world
-		//Example: USA
-		exec("time.exe /T", $hour);
-		$i = array_map("intval", explode(":", trim($hour[0])));
-		exec("date.exe /T", $date);
-		$j = array_map("intval", explode(substr($date[0], 2, 1), trim($date[0])));
-		$offset = round((mktime($i[0], $i[1], 0, $j[1], $j[0], $j[2]) - $time) / 60) * 60;
+	if(str_contains(" " . strtoupper(php_uname("s")), " WIN")){
+		$regex = '/(UTC)(\+*\-*\d*\d*\:*\d*\d*)/';
+
+		/*
+		 * wmic timezone get Caption
+		 * Get the timezone offset
+		 *
+		 * Sample Output var_dump
+		 * array(3) {
+		 *	  [0] =>
+		 *	  string(7) "Caption"
+		 *	  [1] =>
+		 *	  string(20) "(UTC+09:30) Adelaide"
+		 *	  [2] =>
+		 *	  string(0) ""
+		 *	}
+		 */
+		exec("wmic timezone get Caption", $output);
+
+		$string = trim(implode("\n", $output));
+
+		//Detect the Time Zone string
+		preg_match($regex, $string, $matches);
+
+		if(!isset($matches[2]) or ($timezone = parseOffset($matches[2])) === false){
+			$timezone = 'UTC';
+		}
+		if(date_default_timezone_set($timezone)){
+			ini_set("date.timezone", $timezone);
+		}
 	}else{
 		exec("date +%s", $t);
 		$offset = round((intval(trim($t[0])) - time()) / 60) * 60;
+		$daylight = (int) date("I");
+		$d = timezone_name_from_abbr("", $offset, $daylight);
+		@ini_set("date.timezone", $d);
+		date_default_timezone_set($d);
 	}
-
-	$daylight = (int) date("I");
-	$d = timezone_name_from_abbr("", $offset, $daylight);
-	@ini_set("date.timezone", $d);
-	date_default_timezone_set($d);
 }else{
 	$d = @date_default_timezone_get();
 	if(strpos($d, "/") === false){
