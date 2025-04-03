@@ -20,7 +20,7 @@ abstract class StructureGenerator extends StructureBase
 		}
 	}
 	
-	public function generateStructuresInChunk(Level $level, MTRandom $random, $chunkX, $chunkZ){
+	public function generateStructuresInChunk(Level $level, IRandom $random, $chunkX, $chunkZ){
 		$chunkXCenter = ($chunkX << 4) + 8;
 		$chunkZCenter = ($chunkZ << 4) + 8;
 		$var7 = false;

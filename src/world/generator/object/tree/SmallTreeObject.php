@@ -18,7 +18,7 @@ private static $leavesHeight = 4;
 		parent::__construct();
 		$this->type = $treeType;
 	}
-	public function canPlaceObject(Level $level, Vector3 $pos, Random $random){
+	public function canPlaceObject(Level $level, Vector3 $pos, IRandom $random){
 		$radiusToCheck = 0;
 		for($yy = 0; $yy < $this->trunkHeight + 3; ++$yy){
 			if($yy == 1 or $yy === $this->trunkHeight){
@@ -35,8 +35,8 @@ private static $leavesHeight = 4;
 		return true;
 	}
 
-	public function placeObject(Level $level, Vector3 $pos, Random $random){
-		$this->treeHeight = mt_rand(0, 3) + 4; //randomized tree height
+	public function placeObject(Level $level, Vector3 $pos, IRandom $random){
+		$this->treeHeight = $random->nextInt(4) + 4; //randomized tree height
 		$x = $pos->getX();
 		$y = $pos->getY();
 		$z = $pos->getZ();
@@ -51,9 +51,9 @@ private static $leavesHeight = 4;
 					if($xOff === $mid and $zOff === $mid and ($yOff === 0 or mt_rand(0, 1) === 0)){
 						continue;
 					}
-					$b = $level->getBlock(new Vector3($xx, $yy, $zz));
-					if(($b instanceof LeavesBlock) || $b->getID() == 0){
-						$level->setBlockRaw($b, new LeavesBlock($this->type));
+					$block = $level->level->getBlockID($xx, $yy, $zz);
+					if($block == 0 || $block == LEAVES){
+						$level->fastSetBlockUpdate($xx, $yy, $zz, LEAVES, $this->type, false);
 					}
 				}
 			}
@@ -62,16 +62,14 @@ private static $leavesHeight = 4;
 
 	}
 
-	protected function placeTrunk(Level $level, $x, $y, $z, Random $random, $trunkHeight){
+	protected function placeTrunk(Level $level, $x, $y, $z, IRandom $random, $trunkHeight){
 		// The base dirt block
-		$dirtpos = new Vector3($x, $y - 1, $z);
-		$level->setBlockRaw($dirtpos, new DirtBlock());
+		$level->fastSetBlockUpdate($x, $y - 1, $z, DIRT, 0, false);
 
 		for($yy = 0; $yy < $this->treeHeight; ++$yy){
-			$blockId = $level->getBlock(new Vector3($x, $y + $yy, $z))->getID();
+			$blockId = $level->level->getBlockID($x, $y + $yy, $z);
 			if(isset($this->overridable[$blockId])){
-				$trunkpos = new Vector3($x, $y + $yy, $z);
-				$level->setBlockRaw($trunkpos, new WoodBlock($this->type));
+				$level->fastSetBlockUpdate($x, $y + $yy, $z, TRUNK, $this->type, false);
 			}
 		}
 	}

@@ -11,8 +11,8 @@ abstract class StructureComponent
 		$this->componentType = $type;
 	}
 	
-	public function buildComponent(StructureComponent $component, $aList, MTRandom $random){}
-	public abstract function addComponentParts(Level $level, MTRandom $random, AxisAlignedBB $boundingBox): bool;
+	public function buildComponent(StructureComponent $component, $aList, IRandom $random){}
+	public abstract function addComponentParts(Level $level, IRandom $random, AxisAlignedBB $boundingBox): bool;
 	
 	/**
 	 * @param StructureComponent[] $aList
@@ -245,7 +245,7 @@ abstract class StructureComponent
 	public function fillWithMetadataBlocks(){throw new Exception("Not Implemented");} //TODO it is too long + not used for mineshafts i want now
 	public function fillWithRandomizedBlocks(){throw new Exception("Not Implemented");}  //TODO it is too long + not used for mineshafts i want now
 	
-	public function randomlyFillWithBlocks(Level $level, AxisAlignedBB $boundingBox, MTRandom $random, $randomChance, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $blockID, $replaceID, $alwaysReplace){
+	public function randomlyFillWithBlocks(Level $level, AxisAlignedBB $boundingBox, IRandom $random, $randomChance, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $blockID, $replaceID, $alwaysReplace){
 		for($y = $minY; $y <= $maxY; ++$y){
 			for($x = $minX; $x <= $maxX; ++$x){
 				for($z = $minZ; $z < $maxZ; ++$z){
@@ -261,7 +261,7 @@ abstract class StructureComponent
 		}
 	}
 	
-	public function randomlyPlaceBlock(Level $level, AxisAlignedBB $boundingBox, MTRandom $random, $randomChance, $x, $y, $z, $blockID, $blockMeta){
+	public function randomlyPlaceBlock(Level $level, AxisAlignedBB $boundingBox, IRandom $random, $randomChance, $x, $y, $z, $blockID, $blockMeta){
 		if($random->nextFloat() < $randomChance) $this->placeBlockAtCurrentPosition($level, $blockID, $blockMeta, $x, $y, $z, $boundingBox);
 	}
 	

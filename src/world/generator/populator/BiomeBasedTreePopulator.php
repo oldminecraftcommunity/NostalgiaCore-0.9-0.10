@@ -2,12 +2,12 @@
 
 class BiomeBasedTreePopulator extends \TreePopulator
 {
-	public function populate(Level $level, $chunkX, $chunkZ, Random $random){
+	public function populate(Level $level, $chunkX, $chunkZ, IRandom $random){
 		$this->level = $level;
-		$amount = $random->nextRange(0, $this->randomAmount + 1) + $this->baseAmount;
+		$amount = $random->nextInt($this->randomAmount + 1 + 1) + $this->baseAmount;
 		for($i = 0; $i < $amount; ++$i){
-			$x = $random->nextRange($chunkX << 4, ($chunkX << 4) + 15);
-			$z = $random->nextRange($chunkZ << 4, ($chunkZ << 4) + 15);
+			$x = ($chunkX << 4) + $random->nextInt(16);
+			$z = ($chunkZ << 4) + $random->nextInt(16);
 			$biomeID = $level->level->getBiomeId($x, $z);
 			$biome = BiomeSelector::get($biomeID);
 			$treeFeature = null;

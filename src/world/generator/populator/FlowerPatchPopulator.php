@@ -16,17 +16,17 @@ class FlowerPatchPopulator extends Populator
 		
 	];
 	
-	public function populate(Level $level, $chunkX, $chunkZ, Random $random)
+	public function populate(Level $level, $chunkX, $chunkZ, IRandom $random)
 	{
-		$x = $chunkX*16 + $random->nextRange(0, 15);
-		$z = $chunkZ*16 + $random->nextRange(0, 15);
+		$x = $chunkX*16 + $random->nextInt(16);
+		$z = $chunkZ*16 + $random->nextInt(16);
 		
 		for($i = 0; $i < 4; ++$i){
-			$xPos = ($x + $random->nextRange(0, 7)) - $random->nextRange(0, 7);
-			$zPos = ($z + $random->nextRange(0, 7)) - $random->nextRange(0, 7);
+			$xPos = ($x + $random->nextInt(8)) - $random->nextInt(8);
+			$zPos = ($z + $random->nextInt(8)) - $random->nextInt(8);
 			$yPos = $this->getHighestWorkableBlock($level, $xPos, $zPos);
 			if($level->level->getBlockID($xPos, $yPos, $zPos) == 0){
-				$flowerIDMeta = self::$flowerIDS[$random->nextRange(0, count(self::$flowerIDS)-1)];
+				$flowerIDMeta = self::$flowerIDS[$random->nextInt(count(self::$flowerIDS))];
 				$level->level->setBlock($xPos, $yPos, $zPos, $flowerIDMeta[0], $flowerIDMeta[1]);
 			}
 		}

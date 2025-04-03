@@ -165,19 +165,19 @@ class SuperflatGenerator implements LevelGenerator{
 				$grasscount = intval($this->options["spawn"]["grasscount"]);
 			}
 			for($t = 0; $t < $treecount; ++$t){
-				$centerX = $this->random->nextRange(0, 255);
-				$centerZ = $this->random->nextRange(0, 255);
+				$centerX = $this->random->nextInt(256);
+				$centerZ = $this->random->nextInt(256);
 				$down = $this->level->level->getBlockID($centerX, $this->floorLevel - 1, $centerZ);
 				if($down === DIRT or $down === GRASS or $down === FARMLAND){
-					TreeObject::growTree($this->level, new Vector3($centerX, $this->floorLevel, $centerZ), $this->random, $this->random->nextRange(0, 3));
+					TreeObject::growTree($this->level, new Vector3($centerX, $this->floorLevel, $centerZ), $this->random, $this->random->nextInt(4));
 				}
 			}
 			for($t = 0; $t < $grasscount; ++$t){
-				$centerX = $this->random->nextRange(0, 255);
-				$centerZ = $this->random->nextRange(0, 255);
+				$centerX = $this->random->nextInt(256);
+				$centerZ = $this->random->nextInt(256);
 				$down = $this->level->level->getBlockID($centerX, $this->floorLevel - 1, $centerZ);
 				if($down === GRASS){
-					TallGrassObject::growGrass($this->level, new Vector3($centerX, $this->floorLevel - 1, $centerZ), $this->random, $this->random->nextRange(8, 40));
+					TallGrassObject::growGrass($this->level, new Vector3($centerX, $this->floorLevel - 1, $centerZ), $this->random, 8+$this->random->nextInt(33));
 				}
 			}
 		}

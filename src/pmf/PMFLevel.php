@@ -111,12 +111,6 @@ class PMFLevel extends PMF{
 		}
 	}
 
-	public function getXZ($index, &$X = null, &$Z = null){
-		$Z = $index >> 16;
-		$X = ($index & 0x8000) === 0x8000 ? -($index & 0x7fff) : $index & 0x7fff;
-		return array($X, $Z);
-	}
-
 	private function getChunkPath($X, $Z){
 		return dirname($this->file) . "/chunks/" . $Z . "." . $X . ".pmc";
 	}
@@ -601,9 +595,15 @@ class PMFLevel extends PMF{
 	}
 
 	public function getIndex($X, $Z){
-		return ($Z << 16) | ($X < 0 ? (~--$X & 0x7fff) | 0x8000 : $X & 0x7fff);
+		return "$X.$Z";
 	}
-
+	public function getXZ($index, &$X = null, &$Z = null){
+		$xz = explode(".", $index);
+		$Z = $xz[1];
+		$X = $xz[0];
+		return array($X, $Z);
+	}
+	
 	public function saveChunk($X, $Z){
 		$X = (int) $X;
 		$Z = (int) $Z;

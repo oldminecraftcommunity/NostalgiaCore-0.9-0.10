@@ -40,8 +40,11 @@ class CaveGenerator extends StructureBase
 	}
 	
 	public function generateCaveNode(Level $level, $chunkX, $chunkZ, $x, $y, $z, $randFloat, $f1, $f2, $unk_1, $unk_2, $d3){
-		$chunkCenterX = $chunkX*16 + 8;
-		$chunkCenterZ = $chunkZ*16 + 8;
+		$worldX = $chunkX*16;
+		$worldZ = $chunkZ*16;
+		
+		$chunkCenterX = $worldX + 8;
+		$chunkCenterZ = $worldZ + 8;
 		$f = $f3 = 0;
 		$random = new XorShift128Random($this->rand->nextInt());
 		
@@ -91,14 +94,14 @@ class CaveGenerator extends StructureBase
 				if($distFromCenterX*$distFromCenterX + $distFromCenterZ*$distFromCenterZ - $var39*$var39 > $var41*$var41){
 					return;
 				}
-				//if (x >= chunkCenterX - 16.0D - var29 * 2.0D && z >= chunkCenterZ - 16.0D - var29 * 2.0D && x <= chunkCenterX + 16.0D + var29 * 2.0D && z <= chunkCenterZ + 16.0D + var29 * 2.0D)
+				
 				if($x >= $chunkCenterX - 16 - $horizontalDiff*2 && $z >= $chunkCenterZ - 16 - $horizontalDiff*2 && $x <= $chunkCenterX + 16 + $horizontalDiff*2 && $z <= $chunkCenterZ + 16 + $horizontalDiff*2){
-					$minX = floor($x - $horizontalDiff) - $chunkX*16 - 1;
-					$maxX = floor($x + $horizontalDiff) - $chunkX*16 + 1;
+					$minX = floor($x - $horizontalDiff) - $worldX - 1;
+					$maxX = floor($x + $horizontalDiff) - $worldX + 1;
 					$minY = floor($y - $verticalDiff) - 1;
 					$maxY = floor($y + $verticalDiff) + 1;
-					$minZ = floor($z - $horizontalDiff) - $chunkZ*16 - 1;
-					$maxZ = floor($z + $horizontalDiff) - $chunkZ*16 + 1;
+					$minZ = floor($z - $horizontalDiff) - $worldZ - 1;
+					$maxZ = floor($z + $horizontalDiff) - $worldZ + 1;
 					
 					if($minX < 0) $minX = 0;
 					if($maxX > 16) $maxX = 16;
@@ -114,9 +117,8 @@ class CaveGenerator extends StructureBase
 						for($blockZ = $minZ; !$hasWater && $blockZ < $maxZ; ++$blockZ){
 							for($blockY = $maxY + 1; !$hasWater && $blockY >= $minY - 1; --$blockY){
 								if($blockY >= 0 && $blockY < 128){
-									$id = $level->level->getBlockID($blockX + $chunkX*16, $blockY, $blockZ + $chunkZ * 16);
+									$id = $level->level->getBlockID($blockX + $worldX, $blockY, $blockZ + $worldZ);
 									$hasWater = $id == WATER || $id == STILL_WATER;
-									//if (blockY != minY - 1 && blockX != minX && blockX != maxX - 1 && blockZ != minZ && blockZ != maxZ - 1)
 									if($blockY != $minY - 1 && $blockX != $minX && $blockX != $maxX - 1 && $blockZ != $minZ && $blockZ != $maxZ - 1){
 										$blockY = $minY;
 									}
@@ -127,9 +129,9 @@ class CaveGenerator extends StructureBase
 					
 					if(!$hasWater){
 						for($blockX = $minX; $blockX < $maxX; ++$blockX){
-							$var59 = (($blockX + $chunkX*16) + 0.5 - $x) / $horizontalDiff;
+							$var59 = (($blockX + $worldX) + 0.5 - $x) / $horizontalDiff;
 							for($blockZ = $minZ; $blockZ < $maxZ; ++$blockZ){
-								$var46 = (($blockZ + $chunkZ*16) + 0.5 - $z) / $horizontalDiff;
+								$var46 = (($blockZ + $worldZ) + 0.5 - $z) / $horizontalDiff;
 								$yPosition = $maxY;
 								$hasGrass = false;
 								
@@ -137,16 +139,15 @@ class CaveGenerator extends StructureBase
 									for($blockY = $maxY - 1; $blockY >= $minY; --$blockY){
 										$var51 = ($blockY + 0.5 - $y) / $verticalDiff;
 										if($var51 > -0.7 && $var59*$var59 + $var51*$var51 + $var46*$var46 < 1){
-											$blockID = $level->level->getBlockID($blockX + $chunkX*16, $yPosition, $blockZ + $chunkZ * 16);
+											$blockID = $level->level->getBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ);
 											$hasGrass = $blockID == GRASS;
 											if($blockID == STONE || $blockID == DIRT || $hasGrass){
 												if($blockY < 10){
-													$level->level->setBlockID($blockX + $chunkX*16, $yPosition, $blockZ + $chunkZ * 16, LAVA);
+													$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, LAVA);
 												}else{
-													$level->level->setBlockID($blockX + $chunkX*16, $yPosition, $blockZ + $chunkZ * 16, 0);
-													if($hasGrass && $level->level->getBlockID($blockX + $chunkX*16, $yPosition - 1, $blockZ + $chunkZ * 16) == DIRT){
-														//ConsoleAPI::debug("place grass at ".($blockX + $chunkX*16).":".($yPosition - 1).":".($blockZ + $chunkZ * 16));
-														$level->level->setBlockID($blockX + $chunkX*16, $yPosition - 1, $blockZ + $chunkZ * 16, GRASS);
+													$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, 0);
+													if($hasGrass && $level->level->getBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ) == DIRT){
+														$level->level->setBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ, GRASS);
 													}
 												}
 											}

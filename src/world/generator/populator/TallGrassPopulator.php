@@ -32,15 +32,15 @@ class TallGrassPopulator extends Populator{
 		$this->baseAmount = $amount;
 	}
 	
-	public function populate(Level $level, $chunkX, $chunkZ, Random $random){
+	public function populate(Level $level, $chunkX, $chunkZ, IRandom $random){
 		$this->level = $level;
-		$amount = $random->nextRange(0, $this->randomAmount + 1) + $this->baseAmount;
+		$amount = $random->nextInt($this->randomAmount + 1+1) + $this->baseAmount;
 		for($i = 0; $i < $amount; ++$i){
-			$x = $random->nextRange($chunkX << 4, ($chunkX << 4) + 15);
-			$z = $random->nextRange($chunkZ << 4, ($chunkZ << 4) + 15);
+			$x = ($chunkX << 4) + $random->nextInt(16);
+			$z = ($chunkZ << 4) + $random->nextInt(16);
 			for($size = 30; $size > 0; --$size){
-				$xx = $x - 7 + $random->nextRange(0, 15);
-				$zz = $z - 7 + $random->nextRange(0, 15);
+				$xx = $x - 7 + $random->nextInt(16);
+				$zz = $z - 7 + $random->nextInt(16);
 				$yy = $this->getHighestWorkableBlock($xx, $zz);
 				if($yy !== -1 and $this->canTallGrassStay($this->level->level->getBlockID($xx, $yy, $zz),$this->level->level->getBlockID($xx, $yy - 1, $zz))){
 					if(mt_rand(1,4) == 1){

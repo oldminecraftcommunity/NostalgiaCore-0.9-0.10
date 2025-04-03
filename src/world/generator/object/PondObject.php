@@ -3,9 +3,12 @@
 class PondObject{
 
 	public $type;
+	/**
+	 * @var IRandom
+	 */
 	private $random;
 
-	public function __construct(Random $random, Block $type){
+	public function __construct(IRandom $random, Block $type){
 		$this->type = $type;
 		$this->random = $random;
 	}

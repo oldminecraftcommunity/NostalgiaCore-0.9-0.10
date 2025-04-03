@@ -3,11 +3,11 @@
 class DungeonFeature extends Feature
 {
 	
-	protected function selectEID(MTRandom $rand){
+	protected function selectEID(IRandom $rand){
 		
 	}
 	
-	public function place(Level $level, MTRandom $rand, $initialX, $initialY, $initialZ)
+	public function place(Level $level, IRandom $rand, $initialX, $initialY, $initialZ)
 	{
 		$baseSize = 3;
 		$randomSizeX = $rand->nextInt(2) + 2;

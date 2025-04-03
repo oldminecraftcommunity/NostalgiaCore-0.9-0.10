@@ -31,7 +31,7 @@ class NoiseGeneratorPerlin extends NoiseGenerator{
 	];
 	
 	
-	public function __construct(Random $random, $octaves){
+	public function __construct(IRandom $random, $octaves){
 		$this->octaves = $octaves;
 		$this->offsetX = $random->nextFloat() * 256;
 		$this->offsetY = $random->nextFloat() * 256;
@@ -42,11 +42,11 @@ class NoiseGeneratorPerlin extends NoiseGenerator{
 		}
 		
 		for($i = 0; $i < 256; ++$i){
-			$this->perm[$i] = $random->nextRange(0, 255);
+			$this->perm[$i] = $random->nextInt(256);
 		}
 		
 		for($i = 0; $i < 256; ++$i){
-			$pos = $random->nextRange(0, 255 - $i) + $i;
+			$pos = $random->nextInt(256-$i) + $i;
 			$old = $this->perm[$i];
 			
 			$this->perm[$i] = $this->perm[$pos];

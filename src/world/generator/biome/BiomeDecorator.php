@@ -2,7 +2,7 @@
 
 class BiomeDecorator
 {
-	public function decorate(Level $level, $chunkX, $chunkZ, Random $random){
+	public function decorate(Level $level, $chunkX, $chunkZ, IRandom $random){
 		return new SmallTreeObject(SaplingBlock::JUNGLE);
 	}
 }

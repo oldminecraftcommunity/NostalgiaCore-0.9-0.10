@@ -1,11 +1,11 @@
 <?php
 if(USE_NATIVE_RANDOM){
 eval('
-	class MTRandom
+	class MTRandom implements IRandom
 	{
 		public $native;
 		public function __construct($seed = null){
-			$this->native = new \Random\Randomizer(new \Random\Engine\Mt19937($seed));
+			$this->setSeed($seed === null ? (int)microtime(1) : $seed);
 		}
 		public function setSeed($seed){
 			$this->native = new \Random\Randomizer(new \Random\Engine\Mt19937($seed)); 
@@ -26,13 +26,13 @@ eval('
 ');
 }else{
 eval('
-	class MTRandom
+	class MTRandom implements IRandom
 	{
 		const MAG = [0, 0x9908b0df];
 		public $mt;
 		public $index = 0;
 		public function __construct($seed = null){
-			$this->setSeed($seed == null ? (int)microtime(1) : $seed);
+			$this->setSeed($seed === null ? (int)microtime(1) : $seed);
 		}
 		
 		public function setSeed($seed){

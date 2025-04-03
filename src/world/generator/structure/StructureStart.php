@@ -8,7 +8,7 @@ abstract class StructureStart
 	public $components = [];
 	public $boundingBox;
 	
-	public function generateStructure(Level $level, MTRandom $random, AxisAlignedBB $boundingBox){
+	public function generateStructure(Level $level, IRandom $random, AxisAlignedBB $boundingBox){
 		foreach($this->components as $k => $component){
 			if($component->boundingBox->intersectsWith($boundingBox) && !$component->addComponentParts($level, $random, $boundingBox)){
 				unset($this->components[$k]);
@@ -23,7 +23,7 @@ abstract class StructureStart
 		}
 	}
 	
-	public function markAvailableHeight(Level $level, MTRandom $random, $height){
+	public function markAvailableHeight(Level $level, IRandom $random, $height){
 		$var4 = 63 - $height;
 		$var5 = $this->boundingBox->getYSize() + 1;
 		
@@ -37,7 +37,7 @@ abstract class StructureStart
 		}
 	}
 	
-	public function setRandomHeight(Level $level, MTRandom $random, $par3, $par4){
+	public function setRandomHeight(Level $level, IRandom $random, $par3, $par4){
 		$var5 = (int)($par4 - $par3 + 1 - $this->boundingBox->getYSize());
 		$var10 = $var5 > 1 ? $par3 + $random->nextInt($var5) : $par3;
 		$var6 = (int)($var10 - $this->boundingBox->minY);

@@ -1,6 +1,6 @@
 <?php
 
-class XorShift128Random{
+class XorShift128Random implements IRandom{
 	public $x, $y, $z, $w;
 
 	public function __construct($seed = null){

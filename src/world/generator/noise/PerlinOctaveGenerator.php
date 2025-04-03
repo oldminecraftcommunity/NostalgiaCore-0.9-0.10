@@ -24,7 +24,7 @@ require_once("OctaveGenerator.php");
 /***REM_END***/
 
 class PerlinOctaveGenerator extends OctaveGenerator{
-	public function __construct(Random $random, $octaves){
+	public function __construct(IRandom $random, $octaves){
 		$this->octaves = array();
 		for($o = 0; $o < $octaves; ++$o){
 			$this->octaves[$o] = new NoiseGeneratorPerlin($random);

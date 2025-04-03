@@ -19,7 +19,7 @@ abstract class Biome{
 		return new BiomeDecorator();
 	}
 	
-	public function getTree(Random $random){
+	public function getTree(IRandom $random){
 		return null;
 	}
 	

@@ -14,7 +14,7 @@ class BiomeTaiga extends BiomeWithSnow
 		]);
 	}
 	
-	public function getTree(Random $random){
+	public function getTree(IRandom $random){
 		$n = $random->nextInt(3);
 		if($n == 0){
 			return new PineTreeObject();

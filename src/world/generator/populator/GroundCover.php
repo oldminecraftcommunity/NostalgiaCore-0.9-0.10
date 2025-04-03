@@ -2,7 +2,7 @@
 
 class GroundCover extends Populator
 {
-	public function populate(Level $level, $chunkX, $chunkZ, Random $random)
+	public function populate(Level $level, $chunkX, $chunkZ, IRandom $random)
 	{
 		$waterHeight = 63;
 		for($x = 0; $x < 16; ++$x){

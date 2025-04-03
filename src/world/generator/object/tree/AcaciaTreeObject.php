@@ -14,7 +14,7 @@ class AcaciaTreeObject extends TreeObject{
 		}
 	}
 	
-	public function placeObject(Level $level, Vector3 $pos, Random $random){ //World p_76484_1_, Random $random, int $pos->x, int $pos->y, int $pos->z
+	public function placeObject(Level $level, Vector3 $pos, IRandom $random){ //World p_76484_1_, Random $random, int $pos->x, int $pos->y, int $pos->z
 		$var6 = $this->height;
 		$var21 = $level->level->getBlockID($pos->x, $pos->y - 1, $pos->z);
 		
@@ -132,7 +132,7 @@ class AcaciaTreeObject extends TreeObject{
 		}
 	}
 	
-	public function canPlaceObject(Level $level, Vector3 $pos, Random $random)
+	public function canPlaceObject(Level $level, Vector3 $pos, IRandom $random)
 	{
 		$var6 = $this->height = ($random->nextInt(3) + $random->nextInt(3) + 5);
 		$var7 = true;

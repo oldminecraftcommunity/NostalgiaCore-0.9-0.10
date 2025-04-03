@@ -45,7 +45,7 @@ class NoiseGeneratorSimplex extends NoiseGeneratorPerlin{
 		[2, 1, 0, 3],[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0],[3, 1, 0, 2],[0, 0, 0, 0],[3, 2, 0, 1],[3, 2, 1, 0]];
 	protected $offsetW;
 	
-	public function __construct(Random $random, $octaves){
+	public function __construct(IRandom $random, $octaves){
 		parent::__construct($random, $octaves);
 		$this->offsetW = $random->nextFloat() * 256;
 		self::$SQRT_3 = sqrt(3);

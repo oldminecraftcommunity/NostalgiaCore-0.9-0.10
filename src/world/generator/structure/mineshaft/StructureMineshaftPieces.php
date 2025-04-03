@@ -7,7 +7,7 @@ class StructureMineshaftPieces
 	/**
 	 * @return StructureComponent
 	 */
-	public static function getRandomComponent($aList, MTRandom $random, $par2, $par3, $par4, $par5, $par6){
+	public static function getRandomComponent($aList, IRandom $random, $par2, $par3, $par4, $par5, $par6){
 		$var7 = $random->nextInt(100);
 		
 		/*if($var7 >= 80){
@@ -25,7 +25,7 @@ class StructureMineshaftPieces
 		
 	}
 	
-	public static function getNextMineShaftComponent(StructureComponent $component, $aList, MTRandom $random, $par3, $par4, $par5, $par6, $par7){
+	public static function getNextMineShaftComponent(StructureComponent $component, $aList, IRandom $random, $par3, $par4, $par5, $par6, $par7){
 		if($par7 > 8) return null;
 		
 		if(abs($par3 - $component->boundingBox->minX) <= 80 && abs($par5 - $component->boundingBox->minZ) <= 80){

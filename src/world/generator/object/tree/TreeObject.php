@@ -11,10 +11,10 @@ class TreeObject{
 	{
 		return $id == 0 || ($id == LEAVES || $id == LEAVES2) || $id == GRASS || $id == DIRT || $id == TRUNK || $id == TRUNK2 || $id == SAPLING || $id == VINES;
 	}
-	public static function growTree(Level $level, Vector3 $pos, Random $random, $type = 0){
+	public static function growTree(Level $level, Vector3 $pos, IRandom $random, $type = 0){
 		switch($type & 0xf){
 			case SaplingBlock::SPRUCE:
-				if($random->nextRange(0, 1) === 1){
+				if($random->nextInt(2) === 1){
 					$tree = new SpruceTreeObject();
 				}else{
 					$tree = new PineTreeObject();

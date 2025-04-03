@@ -11,7 +11,7 @@ class SpruceTreeObject extends TreeObject{
 	private $leavesBottomY = -1;
 	private $leavesMaxRadius = -1;
 
-	public function canPlaceObject(Level $level, Vector3 $pos, Random $random){
+	public function canPlaceObject(Level $level, Vector3 $pos, IRandom $random){
 		$this->findRandomLeavesSize($random);
 		$checkRadius = 0;
 		for($yy = 0; $yy < $this->totalHeight + 2; ++$yy){
@@ -29,23 +29,23 @@ class SpruceTreeObject extends TreeObject{
 		return true;
 	}
 
-	private function findRandomLeavesSize(Random $random){
-		$this->totalHeight += $random->nextRange(-1, 2);
-		$this->leavesBottomY = (int) ($this->totalHeight - $random->nextRange(1, 2) - 3);
-		$this->leavesMaxRadius = 1 + $random->nextRange(0, 1);
+	private function findRandomLeavesSize(IRandom $random){
+		$this->totalHeight += -1 + $random->nextInt(5);
+		$this->leavesBottomY = (int) ($this->totalHeight - (1+$random->nextInt(2)) - 3);
+		$this->leavesMaxRadius = 1 + $random->nextInt(2);
 	}
 
-	public function placeObject(Level $level, Vector3 $pos, Random $random){
+	public function placeObject(Level $level, Vector3 $pos, IRandom $random){
 		if($this->leavesBottomY === -1 or $this->leavesMaxRadius === -1){
 			$this->findRandomLeavesSize();
 		}
-		$level->setBlockRaw(new Vector3($pos->x, $pos->y - 1, $pos->z), new DirtBlock());
+		$level->fastSetBlockUpdate($pos->x, $pos->y - 1, $pos->z, DIRT, 0, false);
 		$leavesRadius = 0;
 		for($yy = $this->totalHeight; $yy >= $this->leavesBottomY; --$yy){
 			for($xx = -$leavesRadius; $xx <= $leavesRadius; ++$xx){
 				for($zz = -$leavesRadius; $zz <= $leavesRadius; ++$zz){
 					if(abs($xx) != $leavesRadius or abs($zz) != $leavesRadius or $leavesRadius <= 0){
-						$level->setBlockRaw(new Vector3($pos->x + $xx, $pos->y + $yy, $pos->z + $zz), new LeavesBlock($this->type));
+						$level->fastSetBlockUpdate($pos->x + $xx, $pos->y + $yy, $pos->z + $zz, LEAVES, $this->type, false);
 					}
 				}
 			}
@@ -56,7 +56,7 @@ class SpruceTreeObject extends TreeObject{
 			}
 		}
 		for($yy = 0; $yy < ($this->totalHeight - 1); ++$yy){
-			$level->setBlockRaw(new Vector3($pos->x, $pos->y + $yy, $pos->z), new WoodBlock($this->type));
+			$level->fastSetBlockUpdate($pos->x, $pos->y + $yy, $pos->z, TRUNK, $this->type, false);
 		}
 	}
 

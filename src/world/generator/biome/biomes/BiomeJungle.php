@@ -8,7 +8,7 @@ class BiomeJungle extends BiomeWithGrass
 		$this->setTempDown(0.95, 0.9);
 	}
 	
-	public function getTree(Random $random){
+	public function getTree(IRandom $random){
 		return new SmallTreeObject(SaplingBlock::JUNGLE);
 	}
 }

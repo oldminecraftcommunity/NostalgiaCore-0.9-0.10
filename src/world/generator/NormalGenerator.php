@@ -28,7 +28,7 @@ class NormalGenerator implements NewLevelGenerator{
 	
 	public function init(Level $level, Random $random){
 		$this->level = $level;
-		$this->random = $random;
+		$this->random = new XorShift128Random($level->getSeed()); //$random;
 		$this->random->setSeed($this->level->getSeed());
 		$this->mtrandom = new MTRandom($this->level->getSeed());
 		$this->noiseHills = new NoiseGeneratorPerlin($this->random, 3);
@@ -40,7 +40,7 @@ class NormalGenerator implements NewLevelGenerator{
 		$ores = new OrePopulator();
 		$ores->setOreTypes(array(
 			new OreType(new CoalOreBlock(), 20, 16, 0, 128),
-			new OreType(New IronOreBlock(), 20, 8, 0, 64),
+			new OreType(new IronOreBlock(), 20, 8, 0, 64),
 			new OreType(new RedstoneOreBlock(), 8, 7, 0, 16),
 			new OreType(new LapisOreBlock(), 1, 6, 0, 32),
 			new OreType(new GoldOreBlock(), 2, 8, 0, 32),

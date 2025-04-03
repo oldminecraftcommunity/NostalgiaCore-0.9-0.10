@@ -8,7 +8,7 @@ class BiomeForest extends BiomeWithGrass
 		$this->setMinMax(63, 81);
 	}
 	
-	public function getTree(Random $random){
+	public function getTree(IRandom $random){
 		$f = $random->nextFloat();
 		if($f > 0.75){
 			return new SmallTreeObject(SaplingBlock::BIRCH);

@@ -54,7 +54,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 	
 	public function init(Level $level, Random $random){
 		$this->level = $level;
-		$this->random = $random;
+		$this->random = new XorShift128Random($level->getSeed());
 		$this->random->setSeed($this->level->level->getSeed());
 		$this->noiseBase = new NoiseGeneratorPerlin($this->random, 4);
 		$this->selector = new BiomeSelector($this->random, BiomeSelector::$biomes[BIOME_PLAINS]);
@@ -106,41 +106,45 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
 		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];
+		$biomedata = [];
 		for($chunkY = 0; $chunkY < 8; ++$chunkY){
 			$chunk = "";
 			$startY = $chunkY << 4;
 			$endY = $startY + 16;
 			for($z = 0; $z < 16; ++$z){
 				for($x = 0; $x < 16; ++$x){
-					$minSum = 0;
-					$maxSum = 0;
-					$weightSum = 0;
 					
-					$biome = $this->pickBiome($chunkX * 16 + $x, $chunkZ * 16 + $z);
-					$this->level->level->setBiomeId(($chunkX << 4) + $x, ($chunkZ << 4) + $z, $biome->id);
-					for($sx = -ExperimentalGenerator::$SMOOTH_SIZE; $sx <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sx){
-						for($sz = -ExperimentalGenerator::$SMOOTH_SIZE; $sz <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sz){
-							$weight = ExperimentalGenerator::$GAUSSIAN_KERNEL[$sx + ExperimentalGenerator::$SMOOTH_SIZE][$sz + ExperimentalGenerator::$SMOOTH_SIZE];
-							
-							if($sx === 0 and $sz === 0){
-								$adjacent = $biome;
-							}else{
+					if($chunkY == 0){
+						$minSum = 1;
+						$maxSum = 1;
+						$weightSum = 0;
+						
+						for($sx = -ExperimentalGenerator::$SMOOTH_SIZE; $sx <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sx){
+							for($sz = -ExperimentalGenerator::$SMOOTH_SIZE; $sz <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sz){
+								$weight = ExperimentalGenerator::$GAUSSIAN_KERNEL[$sx + ExperimentalGenerator::$SMOOTH_SIZE][$sz + ExperimentalGenerator::$SMOOTH_SIZE];
+								
 								$index = ($chunkX * 16 + $x + $sx).":".($chunkZ * 16 + $z + $sz);
 								if(isset($biomeCache[$index])){
 									$adjacent = $biomeCache[$index];
 								}else{
 									$biomeCache[$index] = $adjacent = $this->pickBiome($chunkX * 16 + $x + $sx, $chunkZ * 16 + $z + $sz);
 								}
+								if($sx == 0 && $sz == 0) $biome = $adjacent;
+								
+								$minSum += ($adjacent->minY - 1) * $weight;
+								$maxSum += $adjacent->maxY * $weight;
+								
+								$weightSum += $weight;
 							}
-							
-							$minSum += ($adjacent->minY - 1) * $weight;
-							$maxSum += $adjacent->maxY * $weight;
-							
-							$weightSum += $weight;
 						}
+						$this->level->level->setBiomeId(($chunkX << 4) + $x, ($chunkZ << 4) + $z, $biome->id);
+						$minSum /= $weightSum;
+						$maxSum /= $weightSum;
+						$biomedata[$z*16 + $x] = [$biome, $minSum, $maxSum];
+					}else{
+						[$biome, $minSum, $maxSum] = $biomedata[$z*16 + $x];
 					}
-					$minSum /= $weightSum;
-					$maxSum /= $weightSum;
+					
 					for($y = $startY; $y < $endY; ++$y){
 						if($y == 0){
 							$chunk .= "\x07";
@@ -184,44 +188,52 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		}
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
+	
 	public static function getFastNoise3D(NoiseGenerator $noise, $xSize, $ySize, $zSize, $xSamplingRate, $ySamplingRate, $zSamplingRate, $x, $y, $z){
-		$noiseArray = array_fill(0, $xSize + 1, array_fill(0, $zSize + 1, []));
+		$noiseArray = array_fill(0, $xSize, array_fill(0, $zSize, []));
 		
 		for($xx = 0; $xx <= $xSize; $xx += $xSamplingRate){
 			for($zz = 0; $zz <= $zSize; $zz += $zSamplingRate){
 				for($yy = 0; $yy <= $ySize; $yy += $ySamplingRate){
-					$noiseArray[$xx][$zz][$yy] = $noise->noise3D(($x + $xx) / 32, ($y + $yy) / 32, ($z + $zz) / 32, 2, 1/4, true);
+					$noiseArray[$xx][$zz][$yy] = $noise->noise3D(($x + $xx) / 32, ($y + $yy) / 32, ($z + $zz) / 32, 2, 0.25, true);
 				}
 			}
 		}
 		
 		for($xx = 0; $xx < $xSize; ++$xx){
+			$nx = (int) ($xx / $xSamplingRate) * $xSamplingRate;
+			$nnx = $nx + $xSamplingRate;
+			$dx1 = (($nnx - $xx) / ($nnx - $nx));
+			$dx2 = (($xx - $nx) / ($nnx - $nx));
+			$noiseXX = &$noiseArray[$xx];
+			$noiseNX = &$noiseArray[$nx];
+			$noiseNNX = &$noiseArray[$nnx];
+			
 			for($zz = 0; $zz < $zSize; ++$zz){
+				$nz = (int) ($zz / $zSamplingRate) * $zSamplingRate;
+				$nnz = $nz + $zSamplingRate;
+				$dz1 = ($nnz - $zz) / ($nnz - $nz);
+				$dz2 = ($zz - $nz) / ($nnz - $nz);
+				$noiseXXZZ = &$noiseXX[$zz];
+				$noiseNXNZ = &$noiseNX[$nz];
+				$noiseNXNNZ = &$noiseNX[$nnz];
+				$noiseNNXNZ = &$noiseNNX[$nz];
+				$noiseNNXNNZ = &$noiseNNX[$nnz];
+				
 				for($yy = 0; $yy < $ySize; ++$yy){
-					if($xx % $xSamplingRate != 0 or $zz % $zSamplingRate != 0 or $yy % $ySamplingRate != 0){
-						$nx = (int) ($xx / $xSamplingRate) * $xSamplingRate;
+					if($xx % $xSamplingRate != 0 || $zz % $zSamplingRate != 0 || $yy % $ySamplingRate != 0){
 						$ny = (int) ($yy / $ySamplingRate) * $ySamplingRate;
-						$nz = (int) ($zz / $zSamplingRate) * $zSamplingRate;
-						
-						$nnx = $nx + $xSamplingRate;
 						$nny = $ny + $ySamplingRate;
-						$nnz = $nz + $zSamplingRate;
-						
-						$dx1 = (($nnx - $xx) / ($nnx - $nx));
-						$dx2 = (($xx - $nx) / ($nnx - $nx));
 						$dy1 = (($nny - $yy) / ($nny - $ny));
 						$dy2 = (($yy - $ny) / ($nny - $ny));
 						
-						$noiseArray[$xx][$zz][$yy] = (($nnz - $zz) / ($nnz - $nz)) * 
-							(
-								$dy1 * ($dx1 * $noiseArray[$nx][$nz][$ny] + $dx2 * $noiseArray[$nnx][$nz][$ny]) + 
-								$dy2 * ($dx1 * $noiseArray[$nx][$nz][$nny] + $dx2 * $noiseArray[$nnx][$nz][$nny])
-							) + 
-							(($zz - $nz) / ($nnz - $nz)) * 
-							(
-								$dy1 * ($dx1 * $noiseArray[$nx][$nnz][$ny] + $dx2 * $noiseArray[$nnx][$nnz][$ny]) + 
-								$dy2 * ($dx1 * $noiseArray[$nx][$nnz][$nny] + $dx2 * $noiseArray[$nnx][$nnz][$nny])
-							);
+						$noiseXXZZ[$yy] = $dz1 * (
+							$dy1 * ($dx1 * $noiseNXNZ[$ny] + $dx2 * $noiseNNXNZ[$ny]) + 
+							$dy2 * ($dx1 * $noiseNXNZ[$nny] + $dx2 * $noiseNNXNZ[$nny])
+						) + $dz2 * (
+							$dy1 * ($dx1 * $noiseNXNNZ[$ny] + $dx2 * $noiseNNXNNZ[$ny]) + 
+							$dy2 * ($dx1 * $noiseNXNNZ[$nny] + $dx2 * $noiseNNXNNZ[$nny])
+						);
 					}
 				}
 			}

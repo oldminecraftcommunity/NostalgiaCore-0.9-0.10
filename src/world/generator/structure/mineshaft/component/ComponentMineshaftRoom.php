@@ -7,12 +7,12 @@ class ComponentMineshaftRoom extends StructureComponent
 	 */
 	public $roomsLinkedToTheRoom = [];
 	
-	public function __construct($par1, MTRandom $random, $par3, $par4){
+	public function __construct($par1, IRandom $random, $par3, $par4){
 		parent::__construct($par1);
 		$this->boundingBox = new AxisAlignedBB($par3, 50, $par4, $par3 + 7 + $random->nextInt(6), $par4 + 7, $par4 + 7 + $random->nextInt(6));
 	}
 	
-	public function buildComponent(StructureComponent $component, $aList, MTRandom $random){
+	public function buildComponent(StructureComponent $component, $aList, IRandom $random){
 		$var4 = $this->componentType;
 		$var6 = $this->boundingBox->getYSize() - 3 - 1;
 		if($var6 <= 0) $var6 = 1;
@@ -70,7 +70,7 @@ class ComponentMineshaftRoom extends StructureComponent
 		}
 	}
 	
-	public function addComponentParts(Level $level, MTRandom $random, AxisAlignedBB $boundingBox): bool
+	public function addComponentParts(Level $level, IRandom $random, AxisAlignedBB $boundingBox): bool
 	{
 		if($this->isLiquidInStructureBoundingBox($level, $boundingBox)){
 			return false;

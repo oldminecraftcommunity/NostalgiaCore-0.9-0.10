@@ -3,9 +3,12 @@
 class OreObject{
 
 	public $type;
+	/**
+	 * @var IRandom
+	 */
 	private $random;
 
-	public function __construct(Random $random, OreType $type){
+	public function __construct(IRandom $random, OreType $type){
 		$this->type = $type;
 		$this->random = $random;
 	}
@@ -26,8 +29,10 @@ class OreObject{
 		$x2 = $xVect + 8 - $offset->x;
 		$z1 = $zVect + 8 + $offset->y;
 		$z2 = $zVect + 8 - $offset->y;
-		$y1 = $yVect + $this->random->nextRange(0, 3) + 2;
-		$y2 = $yVect + $this->random->nextRange(0, 3) + 2;
+		$y1 = $yVect + $this->random->nextInt(4) + 2;
+		$y2 = $yVect + $this->random->nextInt(4) + 2;
+		$id = $this->type->material->getID();
+		$meta = $this->type->material->getMetadata();
 		for($count = 0; $count <= $clusterSize; ++$count){
 			$seedX = $x1 + ($x2 - $x1) * $count / $clusterSize;
 			$seedY = $y1 + ($y2 - $y1) * $count / $clusterSize;
@@ -53,7 +58,7 @@ class OreObject{
 								$sizeZ = ($z + 0.5 - $seedZ) / $size;
 								$sizeZ *= $sizeZ;
 								if(($sizeX + $sizeY + $sizeZ) < 1 and $level->level->getBlockID($x, $y, $z) === STONE){
-									$level->level->setBlock($x, $y, $z, $this->type->material->getID(), $this->type->material->getMetadata());
+									$level->level->setBlock($x, $y, $z, $id, $meta);
 								}
 							}
 						}

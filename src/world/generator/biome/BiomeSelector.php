@@ -17,7 +17,7 @@ class BiomeSelector
 	
 	public $lookup;
 	
-	public function __construct(Random $random, Biome $fallback){
+	public function __construct(IRandom $random, Biome $fallback){
 		$this->fallback = $fallback;
 		$this->temperature = new NoiseGeneratorSimplex($random, 2);
 		$this->rainfall = new NoiseGeneratorSimplex($random, 2);

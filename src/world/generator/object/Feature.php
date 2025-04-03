@@ -8,6 +8,6 @@ abstract class Feature
 		self::$DUNGEON = new DungeonFeature();
 	}
 	
-	public abstract function place(Level $level, MTRandom $rand, $x, $y, $z);
+	public abstract function place(Level $level, IRandom $rand, $x, $y, $z);
 }
 
