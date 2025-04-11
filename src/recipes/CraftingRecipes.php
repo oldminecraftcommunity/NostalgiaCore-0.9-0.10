@@ -53,7 +53,7 @@ class CraftingRecipes{
 		"IRON_BLOCK:?x1=>IRON_INGOT:0x9",
 		"LAPIS_BLOCK:?x1=>DYE:4x9",//Lapis Lazuli
 		"DANDELION:?x1=>DYE:11x2",//Dandelion Yellow
-		"BONE:?x1=>DYE:15x3",//Bone Meal
+		//"BONE:?x1=>DYE:15x3",//Bone Meal - moved to ::init 0.10 and 0.9 have different crafts
 		"DYE:0x1,DYE:14x1=>DYE:3x2",//Cocoa Beans
 		"DYE:0x1,DYE:1x1,DYE:11x1=>DYE:3x3",//Cocoa Beans
 		"DYE:1x1,DYE:15x1=>DYE:9x2",//Pink Dye
@@ -237,9 +237,11 @@ class CraftingRecipes{
 			foreach($add as $r){
 				self::$big[] = $r;
 			}
+			self::$small[] = "BONE:?x1=>DYE:15x3";
 		}else{
 			self::$big[] = "STICK:?x6=>FENCE:0x2";
 			self::$big[] = "STICK:?x4,WOODEN_PLANKS:?x2=>FENCE_GATE:0x1";
+			self::$small[] = "BONE:?x1=>DYE:15x2";
 		}
 
 		foreach(CraftingRecipes::$small as $recipe){
