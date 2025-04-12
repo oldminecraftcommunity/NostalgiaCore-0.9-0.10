@@ -21,4 +21,42 @@ class TallGrassObject{
 			}
 		}
 	}
+	
+	public static function useBonemeal(Level $level, Vector3 $pos, IRandom $random){
+		$v5 = 16;
+		while($v5 < 64){
+			$x = $pos->x;
+			$y = $pos->y+1;
+			$z = $pos->z;
+			if(self::randomWalk($level, $random, $x, $y, $z, $v5)){
+				if($level->level->getBlockID($x, $y, $z) == AIR){
+					$rn = $random->nextInt(16);
+					$id = TALL_GRASS;
+					$meta = 0;
+					if($rn == 0) $id = CYAN_FLOWER;
+					else if($rn == 1) $id = DANDELION;
+					else if($rn == 2) $meta = 2;
+					else $meta = 1;
+					
+					$level->fastSetBlockUpdate($x, $pos->y + 1, $z, $id, $meta, false);
+				}
+			}
+			++$v5;
+		}
+	}
+	
+	public static function randomWalk(Level $level, IRandom $random, &$x, &$y, &$z, $a6){
+		$i = 0;
+		while($i < $a6/16){
+			$x += $random->nextInt(3) - 1;
+			$m = (int) (($random->nextInt(3) - 1) / 2);
+			$y += $random->nextInt(3) * $m;
+			$z += $random->nextInt(3) - 1;
+			if($level->level->getBlockID($x, $y-1, $z) != GRASS || StaticBlock::getIsSolid($level->level->getBlockID($x, $y, $z))){
+				return 0;
+			}
+			++$i;
+		}
+		return $a6 > 15;
+	}
 }

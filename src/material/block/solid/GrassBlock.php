@@ -18,7 +18,7 @@ class GrassBlock extends SolidBlock{
 			if(($player->gamemode & 0x01) === 0){
 				$player->removeItem(DYE,0x0F,1);
 			}
-			TallGrassObject::growGrass($this->level, $this, new Random(), 8, 2);
+			TallGrassObject::useBonemeal($this->level, $this, new XorShift128Random());
 			return true;
 		}elseif($item->isHoe()){
 			if($this->getSide(1)->isTransparent === false) return false;
