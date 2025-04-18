@@ -59,9 +59,9 @@ class CaveGenerator extends StructureBase
 		}
 		
 		$var27 = $random->nextInt((int)($unk_2 / 2)) + ($unk_2 / 4);
+		$horizontalDiff = 1.5 + sin($unk_1 * M_PI / $unk_2) * $randFloat /* * 1 */;
+		$verticalDiff = $horizontalDiff * $d3;
 		for($var28 = ($random->nextInt(6) == 0); $unk_1 < $unk_2; ++$unk_1){
-			$horizontalDiff = 1.5 + sin($unk_1 * M_PI / $unk_2) * $randFloat /* * 1 */;
-			$verticalDiff = $horizontalDiff * $d3;
 			$var33 = cos($f2);
 			$var34 = sin($f2);
 			$x += cos($f1) * $var33;
@@ -79,8 +79,8 @@ class CaveGenerator extends StructureBase
 			$f += ($random->nextFloat() - $random->nextFloat()) * $random->nextFloat() * 2;
 			
 			if(!$z2 && $unk_1 == $var27 && $randFloat > 1 && $unk_2 > 0){
-				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 - (M_PI / 2), $f2 / 3, $unk_1, $unk_2, 1);
-				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 + (M_PI / 2), $f2 / 3, $unk_1, $unk_2, 1);
+				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 - M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
+				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 + M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
 				return;
 			}
 			
@@ -97,10 +97,11 @@ class CaveGenerator extends StructureBase
 				
 				if($x >= $chunkCenterX - 16 - $horizontalDiff*2 && $z >= $chunkCenterZ - 16 - $horizontalDiff*2 && $x <= $chunkCenterX + 16 + $horizontalDiff*2 && $z <= $chunkCenterZ + 16 + $horizontalDiff*2){
 					$minX = floor($x - $horizontalDiff) - $worldX - 1;
-					$maxX = floor($x + $horizontalDiff) - $worldX + 1;
 					$minY = floor($y - $verticalDiff) - 1;
-					$maxY = floor($y + $verticalDiff) + 1;
 					$minZ = floor($z - $horizontalDiff) - $worldZ - 1;
+					
+					$maxX = floor($x + $horizontalDiff) - $worldX + 1;
+					$maxY = floor($y + $verticalDiff) + 1;
 					$maxZ = floor($z + $horizontalDiff) - $worldZ + 1;
 					
 					if($minX < 0) $minX = 0;
@@ -112,52 +113,58 @@ class CaveGenerator extends StructureBase
 					if($minZ < 0) $minZ = 0;
 					if($maxZ > 16) $maxZ = 16;
 					
-					$hasWater = false;
-					for($blockX = $minX; !$hasWater && $blockX < $maxX; ++$blockX){
-						for($blockZ = $minZ; !$hasWater && $blockZ < $maxZ; ++$blockZ){
-							for($blockY = $maxY + 1; !$hasWater && $blockY >= $minY - 1; --$blockY){
-								if($blockY >= 0 && $blockY < 128){
+					for($blockY = $maxY + 1; $blockY >= $minY - 1; --$blockY){
+						if($blockY >= 0 && $blockY < 128){
+							for($blockX = $minX; $blockX < $maxX; ++$blockX){
+								for($blockZ = $minZ; $blockZ < $maxZ; ++$blockZ){
 									$id = $level->level->getBlockID($blockX + $worldX, $blockY, $blockZ + $worldZ);
-									$hasWater = $id == WATER || $id == STILL_WATER;
 									if($blockY != $minY - 1 && $blockX != $minX && $blockX != $maxX - 1 && $blockZ != $minZ && $blockZ != $maxZ - 1){
 										$blockY = $minY;
+									}
+									
+									if($id == WATER || $id == STILL_WATER){ //dont generate a cave if theres water
+										goto skip_cave_gen;
 									}
 								}
 							}
 						}
 					}
 					
-					if(!$hasWater){
-						for($blockX = $minX; $blockX < $maxX; ++$blockX){
-							$var59 = (($blockX + $worldX) + 0.5 - $x) / $horizontalDiff;
-							for($blockZ = $minZ; $blockZ < $maxZ; ++$blockZ){
-								$var46 = (($blockZ + $worldZ) + 0.5 - $z) / $horizontalDiff;
-								$yPosition = $maxY;
-								$hasGrass = false;
-								
-								if($var59*$var59 + $var46*$var46 < 1){
-									for($blockY = $maxY - 1; $blockY >= $minY; --$blockY){
-										$var51 = ($blockY + 0.5 - $y) / $verticalDiff;
-										if($var51 > -0.7 && $var59*$var59 + $var51*$var51 + $var46*$var46 < 1){
-											$blockID = $level->level->getBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ);
-											$hasGrass = $blockID == GRASS;
-											if($blockID == STONE || $blockID == DIRT || $hasGrass){
-												if($blockY < 10){
-													$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, LAVA);
-												}else{
-													$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, 0);
-													if($hasGrass && $level->level->getBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ) == DIRT){
-														$level->level->setBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ, GRASS);
-													}
-												}
+					for($blockX = $minX; $blockX < $maxX; ++$blockX){
+						$var59 = (($blockX + $worldX) + 0.5 - $x) / $horizontalDiff;
+						$var59 *= $var59;
+						if($var59 >= 1) continue;
+						
+						for($blockZ = $minZ; $blockZ < $maxZ; ++$blockZ){
+							$var46 = (($blockZ + $worldZ) + 0.5 - $z) / $horizontalDiff;
+							$var46 = $var46*$var46 + $var59;
+							if($var46 >= 1) continue;
+							
+							$yPosition = $maxY;
+							$hasGrass = false;
+							
+							for($blockY = $maxY - 1; $blockY >= $minY; --$blockY){
+								$var51 = ($blockY + 0.5 - $y) / $verticalDiff;
+								if($var51 > -0.7 && $var51*$var51 + $var46 < 1){
+									$blockID = $level->level->getBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ);
+									$hasGrass = $blockID == GRASS;
+									if($blockID == STONE || $blockID == DIRT || $hasGrass){
+										if($blockY < 10){
+											$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, LAVA);
+										}else{
+											$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, 0);
+											if($hasGrass && $level->level->getBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ) == DIRT){
+												$level->level->setBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ, GRASS);
 											}
 										}
-										--$yPosition;
 									}
 								}
+								--$yPosition;
 							}
 						}
 					}
+					skip_cave_gen:
+					
 				}
 			}
 		}

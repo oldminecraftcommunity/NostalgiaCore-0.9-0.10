@@ -56,14 +56,8 @@ class PMFLevel extends PMF{
 		
 		for($X = 0; $X < 16; ++$X){
 			for($Z = 0; $Z < 16; ++$Z){
-				$index = $this->getIndex($X, $Z);
 				$this->initCleanChunk($X, $Z);
-				//$this->chunks[$index] = false;
-				//$this->chunkChange[$index] = false;
-				//$this->locationTable[$index] = [0 => 0,];
-				//$this->write(Utils::writeShort(0));
-				//$X = $Z = null;
-				//$this->getXZ($index, $X, $Z);
+				
 				@file_put_contents($this->getChunkPath($X, $Z), gzdeflate("", PMF_LEVEL_DEFLATE_LEVEL));
 			}
 		}
@@ -594,7 +588,7 @@ class PMFLevel extends PMF{
 		return true;
 	}
 
-	public function getIndex($X, $Z){
+	public static function getIndex($X, $Z){
 		return "$X.$Z";
 	}
 	public function getXZ($index, &$X = null, &$Z = null){

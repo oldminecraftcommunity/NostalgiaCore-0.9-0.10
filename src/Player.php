@@ -1475,11 +1475,11 @@ class Player{
 				if(($this->entity instanceof Entity) and $packet->messageIndex > $this->lastMovement){
 					$this->lastMovement = $packet->messageIndex;
 					$newPos = new Vector3($packet->x, $packet->y, $packet->z);
+					
 					if($this->forceMovement instanceof Vector3){
 						if($this->forceMovement->distance($newPos) <= 0.7){
 							$this->forceMovement = false;
 						}else{
-							//console("force");
 							$this->teleport($this->forceMovement, $this->entity->yaw, $this->entity->pitch, false);
 						}
 					}

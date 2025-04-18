@@ -173,6 +173,8 @@ class ExperimentalGenerator implements NewLevelGenerator{
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){
+		$worldX = ($chunkX*16);
+		$worldZ = ($chunkZ*16);
 		$this->level->level->setPopulated($chunkX, $chunkZ, true);
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
 		foreach($this->populators as $populator){
@@ -182,7 +184,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$biomecolors = "";
 		for($z = 0; $z < 16; ++$z){
 			for($x = 0; $x < 16; ++$x){
-				$color = GrassColor::getBlendedGrassColor($this->level, ($chunkX*16)+$x, ($chunkZ*16)+$z);
+				$color = GrassColor::getBlendedGrassColor($this->level, $worldX+$x, $worldZ+$z);
 				$biomecolors .= $color;
 			}
 		}
