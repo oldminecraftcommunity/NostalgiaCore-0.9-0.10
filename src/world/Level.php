@@ -168,28 +168,16 @@ class Level{
 		
 		if(!$this->level->isChunkPopulated($X, $Z)) $this->level->unloadChunk($X, $Z);
 		if(!$this->level->isChunkLoaded($X, $Z)) $this->level->loadChunk($X, $Z, true);
-		
-		$miniChunks = [];
-			
-		for($y = 0; $y < 8; ++$y){
-			$miniChunks[$y] = $gen ? $this->level->getMiniChunk($X, $Z, $y) : str_repeat("\x00", 8192);
-		}
 
 		$ci = $this->level->getIndex($X, $Z);
-		$orderedBiomeIds = $this->level->chunkInfo[$ci][0];
-		$orderedBiomeColors = $this->level->chunkInfo[$ci][1];
-
-		for ($i = 0; $i < 16; $i++){
-			for ($j = 0; $j < 16; $j++){
-				$bIndex = ($i << 6) + ($j << 10);
-				foreach($miniChunks as $chunk){
-					$orderedIds .= substr($chunk, $bIndex, 16);
-					$orderedData .= substr($chunk, $bIndex + 16, 8);
-					$orderedLight .= substr($chunk, $bIndex + 32, 8);
-					$orderedSkyLight .= substr($chunk, $bIndex + 48, 8);
-				}
-			}
-		}
+		$orderedBiomeIds = $this->level->biomeInfo[$ci];
+		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
+		
+		$orderedIds = $this->level->blockIds[$ci]; 
+		$orderedData = str_repeat("\x00", 16*16*64); //TODO compress 16*16*128 array into 16*16*64 or make data & light store here as 16*16*64 arrays
+		$orderedLight = str_repeat("\x00", 16*16*64);
+		$orderedSkyLight = str_repeat("\x00", 16*16*64);
+		
 		$chunkTiles = [];
 		$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '".$this->getName()."' AND x >= ".($X * 16 - 1)." AND x < ".($X * 16 + 17)." AND z >= ".($Z * 16 - 1)." AND z < ".($Z * 16 + 17).";");
 		if($tiles !== false and $tiles !== true){
@@ -553,13 +541,6 @@ class Level{
 		return $ret;
 	}
 
-	public function getMiniChunk($X, $Z, $Y){
-		if(!isset($this->level)){
-			return false;
-		}
-		return $this->level->getMiniChunk($X, $Z, $Y);
-	}
-
 	public function setMiniChunk($X, $Z, $Y, $data){
 		if(!isset($this->level)){
 			return false;
@@ -585,20 +566,6 @@ class Level{
 		}
 		
 		return $this->level->unloadChunk($X, $Z, $this->server->saveEnabled);
-	}
-
-
-	public function getOrderedMiniChunk($X, $Z, $Y){
-		if(!isset($this->level)){
-			return false;
-		}
-		$raw = $this->level->getMiniChunk($X, $Z, $Y);
-		$ordered = "";
-		$flag = chr(1 << $Y);
-		for($j = 0; $j < 256; ++$j){
-			$ordered .= $flag . substr($raw, $j << 5, 24); //16 + 8
-		}
-		return $ordered;
 	}
 
 	public function getSafeSpawn($spawn = false){
@@ -748,5 +715,19 @@ class Level{
 			return false;
 		}
 		return $this->server->api->block->scheduleBlockUpdate($pos, $delay, $type);
+	}
+	
+	
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function getMiniChunk($X, $Z, $Y){
+		return false;
+	}
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function getOrderedMiniChunk($X, $Z, $Y){
+		return false;
 	}
 }

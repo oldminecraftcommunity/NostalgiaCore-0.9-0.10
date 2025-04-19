@@ -1,6 +1,6 @@
 <?php
 
-define("PMF_CURRENT_LEVEL_VERSION", 0x03);
+define("PMF_CURRENT_LEVEL_VERSION", 0x04);
 
 class PMFLevel extends PMF{
 
@@ -10,22 +10,45 @@ class PMFLevel extends PMF{
 	 */
 	public $level;
 	public $levelData = [];
-	private $locationTable = [];
-	private $log = 4;
 	private $payloadOffset = 0;
-	private $chunks = [];
+	
 	private $chunkChange = [];
-	public $chunkInfo = [];
+	
+	public $blockIds = [];
+	public $blockMetas = [];
+	public $blockLight = [];
+	public $skyLight = [];
+	
+	public $biomeColorInfo = [];
+	public $biomeInfo = [];
+	
 	public $populated = [];
 	public $fakeLoaded = [];
+	
 	public $justConverted = false;
+	
+	
+	/**
+	 * Used only for coverting worlds from older pmf
+	 * @var array
+	 */
+	private $locationTable = [];
+	/**
+	 * Used only for coverting worlds from older pmf
+	 * @var array
+	 */
+	private $chunks = [];
+	/**
+	 * @deprecated replaced by biomeInfo[index] and biomeColorInfo[index]
+	 */
+	public $chunkInfo = [];
+	
 	public function __construct($file, $blank = false){
 		if(is_array($blank)){
 			$this->create($file, 0);
 			$this->levelData = $blank;
 			$this->createBlank();
 			$this->isLoaded = true;
-			$this->log = (int) ((string) log($this->levelData["width"], 2));
 		}else{
 			if($this->load($file) !== false){
 				$this->parseInfo();
@@ -33,7 +56,6 @@ class PMFLevel extends PMF{
 					$this->isLoaded = false;
 				}else{
 					$this->isLoaded = true;
-					$this->log = (int) ((string) log($this->levelData["width"], 2));
 				}
 			}else{
 				$this->isLoaded = false;
@@ -71,7 +93,7 @@ class PMFLevel extends PMF{
 		}
 	}
 
-	public function saveData($locationTable = true){
+	public function saveData($locationTable = false){
 		$this->levelData["version"] = PMF_CURRENT_LEVEL_VERSION;
 		@ftruncate($this->fp, 5);
 		$this->seek(5);
@@ -88,21 +110,6 @@ class PMFLevel extends PMF{
 		$extra = gzdeflate($this->levelData["extra"], PMF_LEVEL_DEFLATE_LEVEL);
 		$this->write(Utils::writeShort(strlen($extra)) . $extra);
 		$this->payloadOffset = ftell($this->fp);
-
-		if($locationTable !== false){
-			//$this->writeLocationTable();
-		}
-	}
-
-	private function writeLocationTable(){
-		//$cnt = pow($this->levelData["width"], 2);
-		@ftruncate($this->fp, $this->payloadOffset);
-		$this->seek($this->payloadOffset);
-		for($X = 0; $X < 16; ++$X){
-			for($Z = 0; $Z < 16; ++$Z){
-				$this->write(Utils::writeShort($this->locationTable[$this->getIndex($X, $Z)][0]));
-			}
-		}
 	}
 
 	private function getChunkPath($X, $Z){
@@ -127,9 +134,9 @@ class PMFLevel extends PMF{
 			return false;
 		}
 		$this->chunks[$index] = [];
-		$this->chunkChange[$index] = [-1 => false];
-		$this->chunkInfo[$index][0] = str_repeat(ord(BIOME_PLAINS), 256);
-		$this->chunkInfo[$index][1] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
+		$this->chunkChange[$index] = false;
+		$this->biomeInfo[$index] = str_repeat(ord(BIOME_PLAINS), 256);
+		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$this->setPopulated($X, $Z);
 		
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
@@ -142,8 +149,7 @@ class PMFLevel extends PMF{
 				}else{
 					
 					$this->chunks[$index][$Y] = str_repeat("\x00", 16384);
-					$this->chunkChange[$index][-1] = true;
-					$this->chunkChange[$index][$Y] = 16384;
+					$this->chunkChange[$index] = true;
 
 					//Convert id-meta to id-meta-light-light
 					for($x = 0; $x < 16; ++$x){
@@ -188,9 +194,9 @@ class PMFLevel extends PMF{
 		$info = [0 => Utils::readShort(substr($chunk, $offset, 2))];
 		$offset+=2;
 		$this->chunks[$index] = [];
-		$this->chunkChange[$index] = [-1 => false];
-		$this->chunkInfo[$index][0] = substr($chunk, $offset, 256); //Biome data
-		$this->chunkInfo[$index][1] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
+		$this->chunkChange[$index] = false;
+		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
+		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$offset += 256;
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
 			$t = 1 << $Y;
@@ -208,7 +214,7 @@ class PMFLevel extends PMF{
 		
 		$this->setPopulated($X, $Z, true);
 		
-		$this->chunkChange[$index][-1] = true; //force save
+		$this->chunkChange[$index] = true; //force save
 		return true;
 	}
 	
@@ -232,8 +238,8 @@ class PMFLevel extends PMF{
 
 		$this->chunks[$index] = [];
 		$this->chunkChange[$index] = [-1 => false];
-		$this->chunkInfo[$index][0] = substr($chunk, $offset, 256); //Biome data
-		$this->chunkInfo[$index][1] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
+		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
+		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 
 		$offset += 256;
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
@@ -251,7 +257,7 @@ class PMFLevel extends PMF{
 		}
 		$this->setPopulated($X, $Z, $populated);
 
-		$this->chunkChange[$index][-1] = true; //force save
+		$this->chunkChange[$index] = true; //force save
 		return true;
 	}
 	
@@ -477,20 +483,13 @@ class PMFLevel extends PMF{
 	}
 
 	private function readLocationTable(){
-		//$this->locationTable = [];
-		//$cnt = pow($this->levelData["width"], 2);
-		//$this->seek($this->payloadOffset);
 		for($Z = 0; $Z < 16; ++$Z){
 			for($X = 0; $X < 16; ++$X){
 				$index = $this->getIndex($X, $Z);
 				$this->chunks[$index] = false;
 				$this->chunkChange[$index] = false;
-				//$this->locationTable[$index] = [
-				//	0 => Utils::readShort($this->read(2)), //16 bit flags
-				//];
 			}
 		}
-		//var_dump($this->locationTable);
 		return true;
 	}
 	
@@ -514,51 +513,42 @@ class PMFLevel extends PMF{
 	}
 
 	public function close(){
-		$chunks = null;
-		unset($chunks, $chunkChange, $locationTable);
 		parent::close();
 	}
 	
 	public function getBiomeId($x, $z){
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunkInfo[$index])){
-			return 0;
-		}
 		$aX = $x & 15;
 		$aZ = $z & 15;
+		$index = $this->getIndex($X, $Z);
 		
-		return ord($this->chunkInfo[$index][0][$aX + ($aZ << 4)]);
+		return ord($this->biomeInfo[$index][$aX + ($aZ << 4)] ?? "\x00");
 	}
 	public function setGrassColorArrayForChunk($x, $z, $biomecols){
 		$index = $this->getIndex($x, $z);
-		$this->chunkChange[$index][-1] = true;
-		$this->chunkInfo[$index][1] = $biomecols;
+		$this->chunkChange[$index] = true;
+		$this->biomeColorInfo[$index] = $biomecols;
 	}
 	public function setBiomeIdArrayForChunk($x, $z, $biomeIds){
 		$index = $this->getIndex($x, $z);
-		$this->chunkChange[$index][-1] = true;
-		$this->chunkInfo[$index][0] = $biomeIds;
+		$this->chunkChange[$index] = true;
+		$this->biomeInfo[$index] = $biomeIds;
 	}
 	public function setBiomeId($x, $z, $id){
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunkInfo[$index])){
-			return 0;
-		}
+		if(!isset($this->biomeInfo[$index])) return false;
 		$aX = $x & 15;
 		$aZ = $z & 15;
-		$this->chunkInfo[$index][0][$aX + ($aZ << 4)] = chr($id);
+		$this->biomeInfo[$index][$aX + ($aZ << 4)] = chr($id);
 	}
 	public function forceUnloadChunk($X, $Z, $save = true){
 		$X = (int) $X;
 		$Z = (int) $Z;
 		$index = $this->getIndex($X, $Z);
-		$this->chunks[$index] = null;
-		$this->chunkChange[$index] = null;
-		unset($this->chunks[$index], $this->chunkChange[$index]);
+		unset($this->chunks[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 	}
 	public function unloadChunk($X, $Z, $save = true){
 		$X = (int) $X;
@@ -569,9 +559,7 @@ class PMFLevel extends PMF{
 			$this->saveChunk($X, $Z);
 		}
 		$index = $this->getIndex($X, $Z);
-		$this->chunks[$index] = null;
-		$this->chunkChange[$index] = null;
-		unset($this->chunks[$index], $this->chunkChange[$index]);
+		unset($this->chunks[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 		return true;
 	}
 
@@ -581,11 +569,7 @@ class PMFLevel extends PMF{
 	
 	public function isChunkLoaded($X, $Z){
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) or $this->chunks[$index] === false){
-			return false;
-		}
-
-		return true;
+		return isset($this->blockIds[$index]);
 	}
 
 	public static function getIndex($X, $Z){
@@ -606,18 +590,14 @@ class PMFLevel extends PMF{
 			return false;
 		}
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunkChange[$index]) or $this->chunkChange[$index][-1] === false){ //No changes in chunk
+		if(!($this->chunkChange[$index] ?? false)){ //No changes in chunk
 			return true;
 		}
-
 		$chunk = @gzopen($this->getChunkPath($X, $Z), "wb" . PMF_LEVEL_DEFLATE_LEVEL);
-		$bitmap = 0;
-		for($Y = 0; $Y < 8; ++$Y){
-			$bitmap |= ($this->chunks[$index][$Y] !== false and ((isset($this->chunkChange[$index][$Y]) and $this->chunkChange[$index][$Y] === 0) or !$this->isMiniChunkEmpty($X, $Z, $Y))) << $Y;
-		}
+		$bitmap = 0b11111111;
 
-		$biomedata = $this->chunkInfo[$index][0];
-		$biomecolordata = $this->chunkInfo[$index][1];
+		$biomedata = $this->biomeInfo[$index];
+		$biomecolordata = $this->biomeColorInfo[$index];
 		
 		gzwrite($chunk, Utils::writeShort($bitmap), 2); //2 bytes locmap(actually it should be only 1)
 		gzwrite($chunk, chr($this->populated[$index]), 1); //isPopulated
@@ -631,43 +611,18 @@ class PMFLevel extends PMF{
 		
 		gzwrite($chunk, $biomedata);
 		gzwrite($chunk, $biomecolordata);
-
-		for($Y = 0; $Y < 8; ++$Y){
-			if($this->chunks[$index][$Y] !== false and ((isset($this->chunkChange[$index][$Y]) and $this->chunkChange[$index][$Y] === 0) or !$this->isMiniChunkEmpty($X, $Z, $Y))){
-				gzwrite($chunk, $this->chunks[$index][$Y]);
-			}else{
-				$this->chunks[$index][$Y] = false;
-			}
-			$this->chunkChange[$index][$Y] = 0;
-		}
-		$this->chunkChange[$index][-1] = false;
+		gzwrite($chunk, $this->blockIds[$index]);
+		gzwrite($chunk, $this->blockMetas[$index]);
+		gzwrite($chunk, $this->blockLight[$index]);
+		gzwrite($chunk, $this->skyLight[$index]);
+		
+		$this->chunkChange[$index] = false;
 		return true;
-	}
-
-	protected function isMiniChunkEmpty($X, $Z, $Y){
-		$index = $this->getIndex($X, $Z);
-		if($this->chunks[$index][$Y] !== false){
-			if(substr_count($this->chunks[$index][$Y], "\x00") < 16384){
-				return false;
-			}
-		}
-		return true;
-	}
-
-	public function getMiniChunk($X, $Z, $Y){
-		if($this->loadChunk($X, $Z) === false){
-			return str_repeat("\x00", 16384);
-		}
-		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index][$Y]) or $this->chunks[$index][$Y] === false){
-			return str_repeat("\x00", 16384);
-		}
-		return $this->chunks[$index][$Y];
 	}
 	
 	public function generateChunk($X, $Z, LevelGenerator $generator){
 		$index = $this->getIndex($X, $Z);
-		if(isset($this->chunks[$index])){
+		if(isset($this->blockIds[$index])){
 			return false;
 		}
 		$this->initCleanChunk($X, $Z);
@@ -677,7 +632,7 @@ class PMFLevel extends PMF{
 	}
 	
 	public function fillFullChunk($X, $Z){
-		for($Y = 0; $Y < 16; ++$Y){
+		for($Y = 0; $Y < 8; ++$Y){
 			$this->fillMiniChunk($X, $Z, $Y);
 		}
 	}
@@ -697,32 +652,29 @@ class PMFLevel extends PMF{
 		}
 		$chunk = zlib_decode($chunk);
 		$offset = 0;
-		if(strlen($chunk) === 0) return false;
+		if(strlen($chunk) == 0) return false;
 		$info = [0 => Utils::readShort(substr($chunk, $offset, 2))];
 		$offset+=2;
 		$populated = ord($chunk[$offset]) > 0;
 		++$offset;
 		$hasbiomecolors = ord($chunk[$offset]) > 0;
 		++$offset;
-		$this->chunks[$index] = [];
-		$this->chunkChange[$index] = [-1 => false];
-		$this->chunkInfo[$index][0] = substr($chunk, $offset, 256); //Biome data
+		
+		$this->chunkChange[$index] = false;
+		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
 		$offset += 256;
-		$this->chunkInfo[$index][1] = substr($chunk, $offset, 1024); //Biome colors
+		$this->biomeColorInfo[$index] = substr($chunk, $offset, 1024); //Biome colors
 		$offset += 1024;
-		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
-			$t = 1 << $Y;
-			if(($info[0] & $t) === $t){
-				// 4096 + 4096 + 4096 + 4096, Id, Meta, BlockLight, Skylight
-				if(strlen($this->chunks[$index][$Y] = substr($chunk, $offset, 16384)) < 16384){
-					console("[NOTICE] Empty corrupt chunk detected [$X,$Z,:$Y], recovering contents", true, true, 2);
-					$this->fillMiniChunk($X, $Z, $Y);
-				}
-				$offset += 16384;
-			}else{
-				$this->chunks[$index][$Y] = false;
-			}
-		}
+		
+		$this->blockIds[$index] = substr($chunk, $offset, 16*16*128);
+		$offset += 16*16*128;
+		$this->blockMetas[$index] = substr($chunk, $offset, 16*16*128);
+		$offset += 16*16*128;
+		$this->blockLight[$index] = substr($chunk, $offset, 16*16*128);
+		$offset += 16*16*128;
+		$this->skyLight[$index] = substr($chunk, $offset, 16*16*128);
+		$offset += 16*16*128;
+		
 
 		$this->setPopulated($X, $Z, $populated);
 		if($populate && !$populated){
@@ -741,51 +693,45 @@ class PMFLevel extends PMF{
 	}
 	
 	protected function fillMiniChunk($X, $Z, $Y){
+		//TODO get rid of this - cant, used by world converter
 		if($this->isChunkLoaded($X, $Z) === false){
 			return false;
 		}
 		$index = $this->getIndex($X, $Z);
 		
 		$this->chunks[$index][$Y] = str_repeat("\x00", 16384);
-		$this->chunkChange[$index][-1] = true;
-		$this->chunkChange[$index][$Y] = 16384;
+		$this->chunkChange[$index] = true;
 		return true;
 	}
 	
 	public function initCleanChunk($X, $Z){
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index])){
-			$this->chunks[$index] = array(
-				0 => false,
-				1 => false,
-				2 => false,
-				3 => false,
-				4 => false,
-				5 => false,
-				6 => false,
-				7 => false,
-			);
-			$this->chunkChange[$index] = array(
-				-1 => true,
-				0 => 16384,
-				1 => 16384,
-				2 => 16384,
-				3 => 16384,
-				4 => 16384,
-				5 => 16384,
-				6 => 16384,
-				7 => 16384,
-			);
-			$this->chunkInfo[$index] = array(
-				0 => str_repeat("\x00", 256),
-				1 => str_repeat("\x00\x85\xb2\x4a", 256)
-			);
-			$this->locationTable[$index] = array(0);
+		if(!isset($this->blockIds[$index])){
+			$this->blockIds[$index] = str_repeat("\x00", 16*16*128);
+			$this->blockMetas[$index] = str_repeat("\x00", 16*16*128);
+			$this->blockLight[$index] = str_repeat("\x00", 16*16*128);
+			$this->skyLight[$index] = str_repeat("\x00", 16*16*128);
+			
+			$this->chunkChange[$index] = true;
+			$this->biomeInfo[$index] = str_repeat("\x00", 256);
+			$this->biomeColorInfo[$index] = str_repeat("\x00\x85\xb2\x4a", 256);
+			
 			$this->setPopulated($X, $Z, false);
 		}
 	}
 	
+	public function setChunkData($X, $Z, $ids = false, $metas = false, $blocklight = false, $skylight = false){
+		$ind = $this->getIndex($X, $Z);
+		if($ids != false) $this->blockIds[$ind] = $ids;
+		if($metas != false) $this->blockMetas[$ind] = $metas;
+		if($blocklight != false) $this->blockLight[$ind] = $blocklight;
+		if($skylight != false) $this->skyLight[$ind] = $skylight;
+		
+	}
+	
+	
 	public function setMiniChunk($X, $Z, $Y, $data){
+		//TODO get rid of this
 		if($this->isChunkLoaded($X, $Z) === false){
 			$this->loadChunk($X, $Z);
 		}
@@ -794,9 +740,7 @@ class PMFLevel extends PMF{
 		}
 		$index = $this->getIndex($X, $Z);
 		$this->chunks[$index][$Y] = (string) $data;
-		$this->chunkChange[$index][-1] = true;
-		$this->chunkChange[$index][$Y] = 16384;
-		$this->locationTable[$index][0] |= 1 << $Y;
+		$this->chunkChange[$index] = true;
 		return true;
 	}
 	
@@ -804,146 +748,113 @@ class PMFLevel extends PMF{
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$index = $this->getIndex($X, $Z);
-		return $this->chunks[$index] ?? 0;
+		return $this->blockIds[$index] ?? 0;
 	}
 	
 	public function getBlockID($x, $y, $z){
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
 		if($y > 127 || $y < 0) return 0;
 		
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$Y = $y >> 4;
+		
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) || $this->chunks[$index] === false || ($this->chunks[$index][$Y] === false)){
-			return 0;
-		}
-		$aX = $x & 0xf;
-		$aZ = $z & 0xf;
-		$aY = $y & 0xf;
-		$b = ord($this->chunks[$index][$Y][($aY + ($aX << 6) + ($aZ << 10))]);
+		if(!isset($this->blockIds[$index])) return 0; //TODO getBlock will try to load chunk
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$b = ord($this->blockIds[$index][($cx << 11) | ($cz << 7) | $y]);
 		
 		return $b;
 	}
-
+	
 	public function setBlockID($x, $y, $z, $block){
-		if($y > 127 or $y < 0) return false;
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		$block &= 0xFF;
+		if($y > 127 || $y < 0) return false;
 		
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$Y = $y >> 4;
-		$block &= 0xFF;
+		
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) or $this->chunks[$index] === false){
+		if(!isset($this->blockIds[$index])){
 			if($this->loadChunk($X, $Z, false) === false){
 				$this->createUnpopulatedChunk($X, $Z);
 			}
 		}
-		if($this->chunks[$index][$Y] === false){
-			$this->fillMiniChunk($X, $Z, $Y);
-		}
 		
-		$aX = $x & 0xf;
-		$aZ = $z & 0xf;
-		$aY = $y & 0xf;
-		$this->chunks[$index][$Y][(int) ($aY + ($aX << 6) + ($aZ << 10))] = chr($block);
-		if(!isset($this->chunkChange[$index][$Y])){
-			$this->chunkChange[$index][$Y] = 1;
-		}else{
-			++$this->chunkChange[$index][$Y];
-		}
-		$this->chunkChange[$index][-1] = true;
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$this->blockIds[$index][($cx << 11) | ($cz << 7) | $y] = chr($block);
+		$this->chunkChange[$index] = true;
 		return true;
 	}
-
+	
 	public function getBlockDamage($x, $y, $z){
-		if($y > 127 or $y < 0){
-			return 0;
-		}
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		
+		if($y > 127 or $y < 0) return 0;
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$Y = $y >> 4;
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) || $this->chunks[$index] === false || ($this->chunks[$index][$Y] === false)){
-			return 0;
-		}
-		$aX = $x & 0xf;
-		$aZ = $z & 0xf;
-		$aY = $y & 0xf;
-		//if(is_array($this->chunks) && isset($this->chunks[$index]) && is_array($this->chunks[$index]) && isset($this->chunks[$index][$Y]) && is_string($this->chunks[$index][$Y])){
-		$m = ord($this->chunks[$index][$Y][(int) (($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10))]);
-		//}else{ //php8 fix
-		//	$m = 0;
-		//}
+		if(!isset($this->blockMetas[$index])) return 0; //TODO getBlock will try to load chunk
 		
-		if(($y & 1) === 0){
-			$m = $m & 0x0F;
-		}else{
-			$m = $m >> 4;
-		}
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$m = ord($this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y]);
 		return $m;
 	}
 
 	public function setBlockDamage($x, $y, $z, $damage){
-		if($y > 127 or $y < 0){
-			return false;
-		}
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		$damage &= 0x0F;
+		if($y > 127 || $y < 0) return false;
+		
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$Y = $y >> 4;
-		$damage &= 0x0F;
 		$index = $this->getIndex($X, $Z);
-		$aX = $x & 0xf;
-		$aZ = $z & 0xf;
-		$aY = $y & 0xf;
-		$mindex = (int) (($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10));
-		$old_m = ord($this->chunks[$index][$Y][$mindex]);
-		if(($y & 1) === 0){
-			$m = ($old_m & 0xF0) | $damage;
-		}else{
-			$m = ($damage << 4) | ($old_m & 0x0F);
-		}
-
+		if(!isset($this->blockMetas[$index])) return 0;
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$old_m = $this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y];
+		$m = chr($damage);
+		
 		if($old_m != $m){
-			$this->chunks[$index][$Y][$mindex] = chr($m);
-			if(!isset($this->chunkChange[$index][$Y])){
-				$this->chunkChange[$index][$Y] = 1;
-			}else{
-				++$this->chunkChange[$index][$Y];
-			}
-			$this->chunkChange[$index][-1] = true;
+			$this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y] = $m;
+			$this->chunkChange[$index] = true;
 			return true;
 		}
 		return false;
 	}
 
 	public function getBlock($x, $y, $z){
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		
 		$X = $x >> 4;
 		$Z = $z >> 4;
-		$Y = $y >> 4;
-		if($y >= 128 or $y < 0){
-			return [AIR, 0];
-		}
+		if($y >= 128 or $y < 0) return [AIR, 0];
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) or $this->chunks[$index] === false){
-			if($this->loadChunk($X, $Z) === false){
-				return [AIR, 0];
-			}
+		if(!isset($this->blockIds[$index])){
+			if($this->loadChunk($X, $Z) === false) return [AIR, 0];
 		}
-		if($this->chunks[$index][$Y] === false){
-			return [AIR, 0];
-		}
-		$aX = $x & 0xf;
-		$aZ = $z & 0xf;
-		$aY = $y & 0xf;
 		
-		$b = ord($this->chunks[$index][$Y][($aY + ($aX << 6) + ($aZ << 10))]);
-		$m = ord($this->chunks[$index][$Y][(($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10))]);
-
-		if(($y & 1) === 0){
-			$m = $m & 0x0F;
-		}else{
-			$m = $m >> 4;
-		}
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		
+		$b = ord($this->blockIds[$index][($cx << 11) | ($cz << 7) | $y]);
+		$m = ord($this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y]);
+		
 		return [$b, $m];
 	}
 	
@@ -954,60 +865,41 @@ class PMFLevel extends PMF{
 	}
 	
 	public function setBlock($x, $y, $z, $block, $meta = 0){
-		$X = $x >> 4;
-		$Z = $z >> 4;
-		$Y = $y >> 4;
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
 		$block &= 0xFF;
 		$meta &= 0x0F;
-		if($Y >= 128 or $y < 0){
-			return false;
-		}
+		if($y >= 128 || $y < 0) return false;
+		
+		$X = $x >> 4;
+		$Z = $z >> 4;
 		
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->chunks[$index]) or $this->chunks[$index] === false){
+		if(!isset($this->blockIds[$index])){
 			if($this->loadChunk($X, $Z, false) === false){
 				$this->createUnpopulatedChunk($X, $Z);
 			}
 		}
-		if(!isset($this->chunks[$index][$Y]) || $this->chunks[$index][$Y] === false){
-			$this->fillMiniChunk($X, $Z, $Y);
-		}
-		$aX = $x - ($X << 4);
-		$aZ = $z - ($Z << 4);
-		$aY = $y - ($Y << 4);
-		$bindex = (int) ($aY + ($aX << 6) + ($aZ << 10));
-		$mindex = (int) (($aY >> 1) + 16 + ($aX << 6) + ($aZ << 10));
-		$old_b = ord($this->chunks[$index][$Y][$bindex] ?? '\x00');
-		$old_m = ord($this->chunks[$index][$Y][$mindex] ?? '\x00');
-		if(($y & 1) === 0){
-			$m = ($old_m & 0xF0) | $meta;
-		}else{
-			$m = ($meta << 4) | ($old_m & 0x0F);
-		}
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		
+		$old_b = ord($this->blockIds[$index][$bindex] ?? '\x00');
+		$old_m = ord($this->blockMetas[$index][$bindex] ?? '\x00');
 
-		if($old_b !== $block or $old_m !== $m){
-			$this->chunks[$index][$Y][$bindex] = chr($block);
-			$this->chunks[$index][$Y][$mindex] = chr($m);
-			if(!isset($this->chunkChange[$index][$Y])){
-				$this->chunkChange[$index][$Y] = 1;
-			}else{
-				++$this->chunkChange[$index][$Y];
-			}
-			$this->chunkChange[$index][-1] = true;
-			if($old_b instanceof LiquidBlock){
-				$pos = new Position($x, $y, $z, $this->level);
-				for($side = 0; $side <= 5; ++$side){
-					$b = $pos->getSide($side);
-					ServerAPI::request()->api->block->scheduleBlockUpdate($b, ($b instanceof LavaBlock ? 40: 10), BLOCK_UPDATE_NORMAL);
-				}
-			}
+		if($old_b !== $block or $old_m !== $meta){
+			$this->blockIds[$index][$bindex] = chr($block);
+			$this->blockMetas[$index][$bindex] = chr($meta);
+			$this->chunkChange[$index] = true;
 			return true;
 		}
 		return false;
 	}
 
 	public function doSaveRound(){
-		foreach($this->chunks as $index => $chunk){ //TODO fix variables($X, $Z are undefined)
+		foreach($this->blockIds as $index => $_){
 			$this->getXZ($index, $X, $Z);
 			$this->saveChunk($X, $Z);
 		}

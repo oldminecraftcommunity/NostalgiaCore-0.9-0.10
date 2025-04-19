@@ -7,7 +7,7 @@ abstract class StructureGenerator extends StructureBase
 	 */
 	public $structureMap = []; //php array is hashmap
 	
-	public function recursiveGenerate(Level $level, $chunkXoffsetted, $chunkZoffsetted, $chunkX, $chunkZ){
+	public function recursiveGenerate(Level $level, &$blocks, $chunkXoffsetted, $chunkZoffsetted, $chunkX, $chunkZ){
 		$chunkXZ = Utils::chunkPos2Int($chunkXoffsetted, $chunkZoffsetted);
 		if(!isset($this->structureMap[$chunkXZ])){
  			$this->rand->nextInt(); //shouldnt be neccessary, but vanilla has it.
@@ -20,7 +20,7 @@ abstract class StructureGenerator extends StructureBase
 		}
 	}
 	
-	public function generateStructuresInChunk(Level $level, IRandom $random, $chunkX, $chunkZ){
+	public function generateStructuresInChunk(Level $level, &$blocks, IRandom $random, $chunkX, $chunkZ){
 		$chunkXCenter = ($chunkX << 4) + 8;
 		$chunkZCenter = ($chunkZ << 4) + 8;
 		$var7 = false;

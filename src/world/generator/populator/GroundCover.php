@@ -1,8 +1,8 @@
 <?php
 
-class GroundCover extends Populator
+class GroundCover extends GenPopulator
 {
-	public function populate(Level $level, $chunkX, $chunkZ, IRandom $random)
+	public function populate(Level $level, &$blocks, &$meta, $chunkX, $chunkZ, IRandom $random)
 	{
 		$waterHeight = 63;
 		for($x = 0; $x < 16; ++$x){
@@ -18,30 +18,29 @@ class GroundCover extends Populator
 						$diffY = 1;
 					}
 					
-					$column = $level->level->getBlockIDsXZ($pcx, $pcz);
 					for($y = 127; $y > 0; --$y){
-						$chunkY = $y >> 4;
-						$b = $column[$chunkY][(($y & 0xf) + ($x << 6) + ($z << 10))];
-						if($b !== "\x00" and !StaticBlock::getIsTransparent(ord($b))){
+						$b = $blocks[($x << 11) | ($z << 7) | $y];
+						if($b != "\x00" and !StaticBlock::getIsTransparent(ord($b))){
 							break;
 						}
 					}
+					
 					$startY = min(127, $y + $diffY);
 					$endY = $startY - count($cover);
-					for($y = $startY; $y > $endY and $y >= 0; --$y){
-						$chunkY = $y >> 4;
+					for($y = $startY; $y > $endY && $y >= 0; --$y){
 						$pair = $cover[$startY - $y];
-						//$b = BlockAPI::get($pair[0], $pair[1]);
 						$bid = $pair[0];
 						$bmeta = $pair[1];
-						if($column[$chunkY][(($y & 0xf) + ($x << 6) + ($z << 10))] === "\x00" and StaticBlock::getIsSolid($bid)){
+						if($blocks[($x << 11) | ($z << 7) | $y] == "\x00" and StaticBlock::getIsSolid($bid)){
 							break;
 						}
-						if($y <= $waterHeight and $bid == GRASS and $level->level->getBlockID($pcx, $y + 1, $pcz) == STILL_WATER){
+						if($y <= $waterHeight and $bid == GRASS and ord($blocks[($x << 11) | ($z << 7) | ($y+1)]) == STILL_WATER){
 							$level->level->setBlock($pcx, $y, $pcz, DIRT, 0);
+							$blocks[($x << 11) | ($z << 7) | $y] = chr(DIRT);
 							continue;
 						}
-						$level->level->setBlock($pcx, $y, $pcz, $bid, $bmeta);
+						$blocks[($x << 11) | ($z << 7) | $y] = chr($bid);
+						$meta[($x << 11) | ($z << 7) | $y] = chr($bmeta);
 					}
 				}
 			}

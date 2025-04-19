@@ -82,6 +82,7 @@ class LevelImport{
 						}
 					}
 				}
+				//TODO fix converter
 				foreach($chunk as $Y => $data){
 					$pmf->setMiniChunk($X, $Z, $Y, $data);
 				}

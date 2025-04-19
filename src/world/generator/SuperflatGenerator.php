@@ -52,7 +52,7 @@ class SuperflatGenerator implements LevelGenerator{
 		preg_match_all('#(([0-9]{0,})x?([0-9]{1,3}:?[0-9]{0,2})),?#', $blocks, $matches);
 		$y = 0;
 		$this->structure = [];
-		$this->chunks = [];
+		$this->chunk = ["", ""];
 		foreach($matches[3] as $i => $b){
 			$b = BlockAPI::fromString($b);
 			$cnt = $matches[2][$i] === "" ? 1 : intval($matches[2][$i]);
@@ -67,22 +67,16 @@ class SuperflatGenerator implements LevelGenerator{
 			$this->structure[$y] = new AirBlock();
 		}
 
-
-		for($Y = 0; $Y < 8; ++$Y){
-			$this->chunks[$Y] = "";
-			$startY = $Y << 4;
-			$endY = $startY + 16;
-			for($Z = 0; $Z < 16; ++$Z){
-				for($X = 0; $X < 16; ++$X){
-					$blocks = "";
-					$metas = "";
-					for($y = $startY; $y < $endY; ++$y){
-						$blocks .= chr($this->structure[$y]->getID());
-						$metas .= chr($this->structure[$y]->getMetadata());
-					}
-					$this->chunks[$Y] .= $blocks . $metas . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-				}
-			}
+		$blocks = "";
+		$metas = "";
+		for($y = 0; $y < 128; ++$y){
+			$blocks .= chr($this->structure[$y]->getID());
+			$metas .= chr($this->structure[$y]->getMetadata());
+		}
+		for($i = 0; $i < 256; ++$i){
+			$this->chunk[0] .= $blocks;
+			$this->chunk[1] .= $metas;
+			
 		}
 
 		preg_match_all('#(([0-9a-z_]{1,})\(?([0-9a-z_ =:]{0,})\)?),?#', $options, $matches);
@@ -108,9 +102,7 @@ class SuperflatGenerator implements LevelGenerator{
 	}
 
 	public function generateChunk($chunkX, $chunkZ){
-		for($Y = 0; $Y < 8; ++$Y){
-			$this->level->setMiniChunk($chunkX, $chunkZ, $Y, $this->chunks[$Y]);
-		}
+		$this->level->level->setChunkData($chunkX, $chunkZ, $this->chunk[0], $this->chunk[1]);
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, str_repeat(chr(BIOME_PLAINS), 256));
 	}
 

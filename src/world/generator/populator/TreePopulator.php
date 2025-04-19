@@ -37,15 +37,11 @@ class TreePopulator extends Populator{
 	public function getHighestWorkableBlock($x, $z){
 		$xc = $x & 0xf;
 		$zc = $z & 0xf;
-		$column = $this->level->level->getBlockIDsXZ($x, $z);
-		if($column == 0) return -1;
+		$ids = $this->level->level->getBlockIDsXZ($x, $z);
+		if($ids === 0) return -1;
+		
 		for($y = 127; $y >= 0; --$y){
-			$chunkY = $y >> 4;
-			if($column[$chunkY] === false){
-				$y -= 15;
-				continue;
-			}
-			$b = ord($column[$chunkY][(($y & 0xf) + ($xc << 6) + ($zc << 10))]);
+			$b = ord($ids[($xc << 11) | ($zc << 7) | $y]);
 			if($b == DIRT || $b == GRASS){
 				return $y+1;
 			}

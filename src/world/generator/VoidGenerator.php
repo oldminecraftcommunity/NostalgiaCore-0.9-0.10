@@ -39,9 +39,9 @@ class VoidGenerator implements LevelGenerator{
 	}
 		
 	public function generateChunk($chunkX, $chunkZ){
-		for($Y = 0; $Y < 8; ++$Y){
-			$this->level->setMiniChunk($chunkX, $chunkZ, $Y, $this->chunks[$Y]);
-		}
+		//for($Y = 0; $Y < 8; ++$Y){
+			//$this->level->setMiniChunk($chunkX, $chunkZ, $Y, $this->chunks[$Y]);
+		//}
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){		

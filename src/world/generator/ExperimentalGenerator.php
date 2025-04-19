@@ -26,6 +26,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 	
 	public static $GAUSSIAN_KERNEL = null;
 	public static $SMOOTH_SIZE = 2;
+	const BEDROCK_LEVEL = "\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07";
 	
 	public function __construct(array $options = array()){
 		ExperimentalGenerator::generateKernel();
@@ -75,7 +76,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 			new OreType(new StoneBlock(5), 12, 16, 0, 128),
 		));
 		$this->populators[] = $ores;
-		$this->genPopulators[] = new GroundCover();
+		
 		$trees = new TreePopulator();
 		$trees->setBaseAmount(3);
 		$trees->setRandomAmount(0);
@@ -85,7 +86,9 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$tallGrass->setBaseAmount(5);
 		$tallGrass->setRandomAmount(0);
 		$this->populators[] = $tallGrass;
+		
 		$this->caveGenerator = new CaveGenerator($this->level->getSeed());
+		$this->genPopulators[] = new GroundCover();
 	}
 	
 	public function pickBiome(int $x, int $z){
@@ -106,70 +109,57 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
 		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];
-		$biomedata = [];
-		for($chunkY = 0; $chunkY < 8; ++$chunkY){
-			$chunk = "";
-			$startY = $chunkY << 4;
-			$endY = $startY + 16;
+		$blockIds = "";
+		$blockMetas = str_repeat("\x00", 16*16*128);
+		
+		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				for($x = 0; $x < 16; ++$x){
-					
-					if($chunkY == 0){
-						$minSum = 1;
-						$maxSum = 1;
-						$weightSum = 0;
+				$minSum = 1;
+				$maxSum = 1;
+				$weightSum = 0;
+				
+				for($sx = -ExperimentalGenerator::$SMOOTH_SIZE; $sx <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sx){
+					for($sz = -ExperimentalGenerator::$SMOOTH_SIZE; $sz <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sz){
+						$weight = ExperimentalGenerator::$GAUSSIAN_KERNEL[$sx + ExperimentalGenerator::$SMOOTH_SIZE][$sz + ExperimentalGenerator::$SMOOTH_SIZE];
 						
-						for($sx = -ExperimentalGenerator::$SMOOTH_SIZE; $sx <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sx){
-							for($sz = -ExperimentalGenerator::$SMOOTH_SIZE; $sz <= ExperimentalGenerator::$SMOOTH_SIZE; ++$sz){
-								$weight = ExperimentalGenerator::$GAUSSIAN_KERNEL[$sx + ExperimentalGenerator::$SMOOTH_SIZE][$sz + ExperimentalGenerator::$SMOOTH_SIZE];
-								
-								$index = ($chunkX * 16 + $x + $sx).":".($chunkZ * 16 + $z + $sz);
-								if(isset($biomeCache[$index])){
-									$adjacent = $biomeCache[$index];
-								}else{
-									$biomeCache[$index] = $adjacent = $this->pickBiome($chunkX * 16 + $x + $sx, $chunkZ * 16 + $z + $sz);
-								}
-								if($sx == 0 && $sz == 0) $biome = $adjacent;
-								
-								$minSum += ($adjacent->minY - 1) * $weight;
-								$maxSum += $adjacent->maxY * $weight;
-								
-								$weightSum += $weight;
-							}
+						$index = ($chunkX * 16 + $x + $sx).":".($chunkZ * 16 + $z + $sz);
+						if(isset($biomeCache[$index])){
+							$adjacent = $biomeCache[$index];
+						}else{
+							$biomeCache[$index] = $adjacent = $this->pickBiome($chunkX * 16 + $x + $sx, $chunkZ * 16 + $z + $sz);
 						}
-						$this->level->level->setBiomeId(($chunkX << 4) + $x, ($chunkZ << 4) + $z, $biome->id);
-						$minSum /= $weightSum;
-						$maxSum /= $weightSum;
-						$biomedata[$z*16 + $x] = [$biome, $minSum, $maxSum];
-					}else{
-						[$biome, $minSum, $maxSum] = $biomedata[$z*16 + $x];
+						if($sx == 0 && $sz == 0) $biome = $adjacent;
+						
+						$minSum += ($adjacent->minY - 1) * $weight;
+						$maxSum += $adjacent->maxY * $weight;
+						
+						$weightSum += $weight;
 					}
-					
-					for($y = $startY; $y < $endY; ++$y){
-						if($y == 0){
-							$chunk .= "\x07";
-							continue;
-						}
-						$noiseAdjustment = 2 * (($maxSum - $y) / ($maxSum - $minSum)) - 1;
-						$caveLevel = $minSum - 10;
-						$distAboveCaveLevel = $y - $caveLevel > 0 ? $y - $caveLevel : 0; //max(0, $y - $caveLevel); // must be positive, looks like max is slower
-						$noiseAdjustment = ($noiseAdjustment < (0.4 + ($distAboveCaveLevel / 10))) ? $noiseAdjustment : (0.4 + ($distAboveCaveLevel / 10)); //min($noiseAdjustment, 0.4 + ($distAboveCaveLevel / 10));
-						$noiseValue = $noiseArray[$x][$z][$y] + $noiseAdjustment;
-						$chunk .= (($noiseValue > 0) ? "\x01" : (($y <= $this->waterHeight) ? "\x09" : "\x00"));
-					}
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //light
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //more light
+				}
+				$this->level->level->setBiomeId(($chunkX << 4) + $x, ($chunkZ << 4) + $z, $biome->id);
+				$minSum /= $weightSum;
+				$maxSum /= $weightSum;
+				
+				$caveLevel = $minSum - 10;
+				$blockIds .= self::BEDROCK_LEVEL;
+				for($y = 1; $y < 128; ++$y){
+					$noiseAdjustment = 2 * (($maxSum - $y) / ($maxSum - $minSum)) - 1;
+					$distAboveCaveLevel = $y - $caveLevel > 0 ? $y - $caveLevel : 0;
+					$noiseAdjustment = ($noiseAdjustment < (0.4 + ($distAboveCaveLevel / 10))) ? $noiseAdjustment : (0.4 + ($distAboveCaveLevel / 10));
+					$noiseValue = $noiseArray[$x][$z][$y] + $noiseAdjustment;
+					$blockIds .= (($noiseValue > 0) ? "\x01" : (($y <= $this->waterHeight) ? "\x09" : "\x00"));
 				}
 			}
-			$this->level->setMiniChunk($chunkX, $chunkZ, $chunkY, $chunk);
 		}
 		
 		foreach($this->genPopulators as $pop){
-			$pop->populate($this->level, $chunkX, $chunkZ, $this->random);
+			$pop->populate($this->level, $blockIds, $blockMetas, $chunkX, $chunkZ, $this->random);
+		}
+		if(PocketMinecraftServer::$generateCaves){
+			$this->caveGenerator->generate($this->level, $blockIds, $chunkX, $chunkZ);
 		}
 		
-		$this->caveGenerator->generate($this->level, $chunkX, $chunkZ);
+		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas);
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){

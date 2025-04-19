@@ -5,12 +5,7 @@ class GrassColor{
 	public static function index($f1, $f){
 		$v2 = (int) ((1 - $f) * 255);
 		$v3 = (int) ((1 - $f1*$f) * 255);
-		if($v3 < 0) $v3 = 0;
-		if($v3 > 255) $v3 = 255;
-		$v4 = $v3 << 8;
-		if($v2 < 0) $v2 = 0;
-		if($v2 > 255) $v2 = 255;
-		return $v2 | $v4;
+		return $v2 | ($v3 << 8);
 	}
 
 	public static function getGrassColor($f, $f1){
