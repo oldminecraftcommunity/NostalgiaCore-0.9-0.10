@@ -76,8 +76,8 @@ class SuperflatGenerator implements LevelGenerator{
 		for($i = 0; $i < 256; ++$i){
 			$this->chunk[0] .= $blocks;
 			$this->chunk[1] .= $metas;
-			
 		}
+		//TODO fix metas
 
 		preg_match_all('#(([0-9a-z_]{1,})\(?([0-9a-z_ =:]{0,})\)?),?#', $options, $matches);
 		foreach($matches[2] as $i => $option){

@@ -109,7 +109,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];
 		$blockIds = "";
-		$blockMetas = str_repeat("\x00", 16*16*128);
+		$blockMetas = str_repeat("\x00", 16*16*64);
 		
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){

@@ -78,8 +78,8 @@ class HellGenerator implements NewLevelGenerator{
 
 		$noise = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$blockIds = "";
-		$blockMetas = str_repeat("\x00", 16*16*128);
-		$blockLight = str_repeat("\x00", 16*16*128);
+		$blockMetas = str_repeat("\x00", 16*16*64);
+		$blockLight = str_repeat("\x00", 16*16*64);
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
 				for($y = 0; $y < 128; ++$y){
@@ -94,7 +94,9 @@ class HellGenerator implements NewLevelGenerator{
 					if($noiseValue > 0) $blockIds .= "\x57"; //Netherrack
 					elseif($y <= $this->waterHeight){
 						$blockIds .= "\x0b"; //Lava
-						$blockLight[($x << 11) | ($z << 7) | $y] = "\x0f";
+						$in = ($x << 11) | ($z << 7) | $y;
+						$light = ord($blockLight[$in >> 1]);
+						$blockLight[$in >> 1] = chr(($in & 1) ? ($light & 0xf0) | 0xf : 0xf0 | ($light & 0xf)); 
 					}
 					else $blockIds .= "\x00"; //Air
 				}

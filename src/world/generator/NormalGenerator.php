@@ -89,7 +89,7 @@ class NormalGenerator implements NewLevelGenerator{
 		$base = array();
 		$biomes = str_repeat(chr(BIOME_PLAINS), 256);
 		$blockIds = "";
-		$blockMetas = str_repeat("\x00", 16*16*128);
+		$blockMetas = str_repeat("\x00", 16*16*64);
 		
 		for($z = 0; $z < 16; ++$z){
 			for($x = 0; $x < 16; ++$x){

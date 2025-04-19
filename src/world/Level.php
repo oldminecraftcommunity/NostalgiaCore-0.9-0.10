@@ -174,9 +174,9 @@ class Level{
 		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
 		
 		$orderedIds = $this->level->blockIds[$ci]; 
-		$orderedData = str_repeat("\x00", 16*16*64); //TODO compress 16*16*128 array into 16*16*64 or make data & light store here as 16*16*64 arrays
-		$orderedLight = str_repeat("\x00", 16*16*64);
-		$orderedSkyLight = str_repeat("\x00", 16*16*64);
+		$orderedData = $this->level->blockMetas[$ci]; //TODO compress 16*16*128 array into 16*16*64 or make data & light store here as 16*16*64 arrays
+		$orderedLight = $this->level->blockLight[$ci];
+		$orderedSkyLight = $this->level->skyLight[$ci];
 		
 		$chunkTiles = [];
 		$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '".$this->getName()."' AND x >= ".($X * 16 - 1)." AND x < ".($X * 16 + 17)." AND z >= ".($Z * 16 - 1)." AND z < ".($Z * 16 + 17).";");
@@ -647,25 +647,6 @@ class Level{
 	}
 
 	public function checkTime(){
-		/*if(!isset($this->level)){
-			return false;
-		}
-		$now = microtime(true);
-		if($this->stopTime == true){
-			$time = $this->startTime;
-		}else{
-			$time = $this->startTime + ($now - $this->startCheck) * 20;
-		}
-		if($this->server->api->dhandle("time.change", ["level" => $this, "time" => $time]) !== false){ //send time to player every 5 ticks
-			$this->time = $time;
-			$pk = new SetTimePacket;
-			$pk->time = (int) $this->time;
-			console($pk->time);
-			$pk->started = $this->stopTime == false;
-			$this->server->api->player->broadcastPacket($this->players, $pk);
-		}else{
-			$this->time -= 20 * 13;
-		}*/
 		$pk = new SetTimePacket;
 		$pk->time = (int) $this->time;
 		$pk->started = $this->stopTime == false;

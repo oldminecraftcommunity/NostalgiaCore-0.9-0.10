@@ -668,12 +668,12 @@ class PMFLevel extends PMF{
 		
 		$this->blockIds[$index] = substr($chunk, $offset, 16*16*128);
 		$offset += 16*16*128;
-		$this->blockMetas[$index] = substr($chunk, $offset, 16*16*128);
-		$offset += 16*16*128;
-		$this->blockLight[$index] = substr($chunk, $offset, 16*16*128);
-		$offset += 16*16*128;
-		$this->skyLight[$index] = substr($chunk, $offset, 16*16*128);
-		$offset += 16*16*128;
+		$this->blockMetas[$index] = substr($chunk, $offset, 16*16*64);
+		$offset += 16*16*64;
+		$this->blockLight[$index] = substr($chunk, $offset, 16*16*64);
+		$offset += 16*16*64;
+		$this->skyLight[$index] = substr($chunk, $offset, 16*16*64);
+		$offset += 16*16*64;
 		
 
 		$this->setPopulated($X, $Z, $populated);
@@ -708,9 +708,9 @@ class PMFLevel extends PMF{
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->blockIds[$index])){
 			$this->blockIds[$index] = str_repeat("\x00", 16*16*128);
-			$this->blockMetas[$index] = str_repeat("\x00", 16*16*128);
-			$this->blockLight[$index] = str_repeat("\x00", 16*16*128);
-			$this->skyLight[$index] = str_repeat("\x00", 16*16*128);
+			$this->blockMetas[$index] = str_repeat("\x00", 16*16*64);
+			$this->blockLight[$index] = str_repeat("\x00", 16*16*64);
+			$this->skyLight[$index] = str_repeat("\x00", 16*16*64);
 			
 			$this->chunkChange[$index] = true;
 			$this->biomeInfo[$index] = str_repeat("\x00", 256);
@@ -726,7 +726,6 @@ class PMFLevel extends PMF{
 		if($metas != false) $this->blockMetas[$ind] = $metas;
 		if($blocklight != false) $this->blockLight[$ind] = $blocklight;
 		if($skylight != false) $this->skyLight[$ind] = $skylight;
-		
 	}
 	
 	
@@ -807,8 +806,9 @@ class PMFLevel extends PMF{
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
-		$m = ord($this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y]);
-		return $m;
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		$m = ord($this->blockMetas[$index][$bindex >> 1]);
+		return $bindex & 1 ? $m >> 4 : $m & 0xf;
 	}
 
 	public function setBlockDamage($x, $y, $z, $damage){
@@ -825,11 +825,19 @@ class PMFLevel extends PMF{
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
-		$old_m = $this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y];
-		$m = chr($damage);
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		$old_m = $this->blockMetas[$index][$bindex >> 1];
+		$new_m = 0;
+		if($bindex & 1){
+			$new_m = ($old_m & 0xf) | ($damage << 4);
+			$old_m >>= 4;
+		}else {
+			$new_m = ($old_m << 4) | ($damage);
+			$old_m &= 0xf;
+		}
 		
-		if($old_m != $m){
-			$this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y] = $m;
+		if($old_m != $new_m){
+			$this->blockMetas[$index][$bindex >> 1] = $new_m;
 			$this->chunkChange[$index] = true;
 			return true;
 		}
@@ -851,11 +859,11 @@ class PMFLevel extends PMF{
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
 		
-		$b = ord($this->blockIds[$index][($cx << 11) | ($cz << 7) | $y]);
-		$m = ord($this->blockMetas[$index][($cx << 11) | ($cz << 7) | $y]);
-		
-		return [$b, $m];
+		$b = ord($this->blockIds[$index][$bindex]);
+		$m = ord($this->blockMetas[$index][$bindex >> 1]);
+		return [$b, $bindex & 1 ? $m >> 4 : $m & 0xf];
 	}
 	
 	public function createUnpopulatedChunk($X, $Z){
@@ -885,13 +893,23 @@ class PMFLevel extends PMF{
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		$mindex = $bindex >> 1;
 		
 		$old_b = ord($this->blockIds[$index][$bindex] ?? '\x00');
-		$old_m = ord($this->blockMetas[$index][$bindex] ?? '\x00');
-
-		if($old_b !== $block or $old_m !== $meta){
+		$old_m = ord($this->blockMetas[$index][$mindex] ?? '\x00');
+		$new_m = 0;
+		if($bindex & 1){
+			$new_m = ($old_m & 0xf) | ($meta << 4);
+			$old_m >>= 4;
+		}
+		else {
+			$new_m = ($old_m << 4) | $meta;
+			$old_m &= 0xf;
+		}
+		
+		if($old_b != $block || $old_m != $meta){
 			$this->blockIds[$index][$bindex] = chr($block);
-			$this->blockMetas[$index][$bindex] = chr($meta);
+			$this->blockMetas[$index][$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;
 			return true;
 		}
