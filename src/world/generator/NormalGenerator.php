@@ -88,7 +88,9 @@ class NormalGenerator implements NewLevelGenerator{
 		$hills = array();
 		$base = array();
 		$biomes = str_repeat(chr(BIOME_PLAINS), 256);
-		$biomecolors = ""; //str_repeat("\x00\xff\xff\x00\x00\x00\x00\xff", 128);
+		$blockIds = "";
+		$blockMetas = str_repeat("\x00", 16*16*128);
+		
 		for($z = 0; $z < 16; ++$z){
 			for($x = 0; $x < 16; ++$x){
 				$biomes[($z << 4) + $x] = chr($this->pickBiome($chunkX * 16 + $x, $chunkZ * 16 + $z)->id);
@@ -103,74 +105,67 @@ class NormalGenerator implements NewLevelGenerator{
 		}
 
 
-		for($chunkY = 0; $chunkY < 8; ++$chunkY){
-			$chunk = "";
-			$startY = $chunkY << 4;
-			$endY = $startY + 16;
+		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				for($x = 0; $x < 16; ++$x){
-					$i = ($z << 4) + $x;
-					$height = $this->worldHeight + $hills[$i] * 14 + $base[$i] * 7;
-					$height = (int) $height;
-					$biomeID = ord($biomes[$i]);
-					for($y = $startY; $y < $endY; ++$y){
-						$diff = $height - $y;
-						if($y <= 4 and ($y === 0 or $this->random->nextFloat() < 0.33)){
-							$chunk .= "\x07"; //bedrock
-						}elseif($diff > 2){
-							$chunk .= "\x01"; //stone
-						}elseif($diff > 0){
-							if($patches[$i] > 0.9){
-								$chunk .= "\x01"; //stone
-							}elseif($patches[$i] < -0.8){
-								$chunk .= "\x0d"; //gravel
+				$i = ($z << 4) + $x;
+				$height = $this->worldHeight + $hills[$i] * 14 + $base[$i] * 7;
+				$height = (int) $height;
+				$biomeID = ord($biomes[$i]);
+				for($y = 0; $y < 128; ++$y){
+					$diff = $height - $y;
+					if($y <= 4 and ($y === 0 or $this->random->nextFloat() < 0.33)){
+						$blockIds .= "\x07"; //bedrock
+					}elseif($diff > 2){
+						$blockIds .= "\x01"; //stone
+					}elseif($diff > 0){
+						if($patches[$i] > 0.9){
+							$blockIds .= "\x01"; //stone
+						}elseif($patches[$i] < -0.8){
+							$blockIds .= "\x0d"; //gravel
+						}else{
+							$blockIds .= $biomeID == BIOME_DESERT ? chr(SANDSTONE) : chr(DIRT);
+						}
+					}elseif($y <= $this->waterHeight){
+						if(($this->waterHeight - $y) <= 1 and $diff === 0){
+							if($biomeID === BIOME_TAIGA){
+								if($y == $this->waterHeight) $blockIds .= chr(GRASS);
+								else $blockIds .= chr(DIRT);
 							}else{
-								$chunk .= $biomeID === BIOME_DESERT ? chr(SANDSTONE) : chr(DIRT);
-							}
-						}elseif($y <= $this->waterHeight){
-							if(($this->waterHeight - $y) <= 1 and $diff === 0){
-								if($biomeID === BIOME_TAIGA){
-									if($y == $this->waterHeight) $chunk .= chr(GRASS);
-									else $chunk .= chr(DIRT);
-								}else{
-									$chunk .= chr(SAND);
-								}
-							}elseif($diff === 0){
-								$chunk .= "\x03"; //dirt
-							}else{
-								//if($y === $this->waterHeight && $biomeID == BIOME_TAIGA){
-								//	$chunk .= chr(ICE);
-								///}else{
-								$chunk .= "\x09"; //still_water
-								//}
+								$blockIds .= chr(SAND);
 							}
 						}elseif($diff === 0){
-							if($patches[$i] > 0.7){
-								$chunk .= "\x01"; //stone
-							}elseif($patches[$i] < -0.8){
-								$chunk .= "\x0d"; //gravel
-							}else{
-								$chunk .= $biomeID === BIOME_DESERT ? chr(SAND) : chr(GRASS);
-							}
+							$blockIds .= "\x03"; //dirt
 						}else{
-							$chunk .= "\x00";
+							//if($y === $this->waterHeight && $biomeID == BIOME_TAIGA){
+							//	$chunk .= chr(ICE);
+							///}else{
+							$blockIds .= "\x09"; //still_water
+							//}
 						}
+					}elseif($diff === 0){
+						if($patches[$i] > 0.7){
+							$blockIds .= "\x01"; //stone
+						}elseif($patches[$i] < -0.8){
+							$blockIds .= "\x0d"; //gravel
+						}else{
+							$blockIds .= $biomeID == BIOME_DESERT ? chr(SAND) : chr(GRASS);
+						}
+					}else{
+						$blockIds .= "\x00";
 					}
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //meta
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //light/skylight
-					$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //skylight/light
 				}
 			}
-			$this->level->setMiniChunk($chunkX, $chunkZ, $chunkY, $chunk);
 		}
+		
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, $biomes);
 		if(PocketMinecraftServer::$generateCaves){
-			$this->caveGenerator->generate($this->level, $chunkX, $chunkZ);
+			$this->caveGenerator->generate($this->level, $blockIds, $chunkX, $chunkZ);
 		}
 		
 		if(self::HIDDEN_FEATURES) {
-			$this->mineshaftGenerator->generate($this->level, $chunkX, $chunkZ);
+			$this->mineshaftGenerator->generate($this->level, $blockIds, $chunkX, $chunkZ);
 		}
+		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas);
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){
@@ -191,7 +186,6 @@ class NormalGenerator implements NewLevelGenerator{
 		}
 
 		if(self::HIDDEN_FEATURES) {
-			//this.mineshaftGenerator.generateStructuresInChunk(this.worldObj, this.rand, par2, par3);
 			$this->mineshaftGenerator->generateStructuresInChunk($this->level, $this->mtrandom, $chunkX, $chunkZ);
 			for ($i = 0; $i < 8; ++$i){
 				$x = $blockX + $this->mtrandom->nextInt(16) + 8;

@@ -10,7 +10,7 @@ class EndGenerator implements NewLevelGenerator{
 	private $random;
 	private $density = 0.6;
 
-	/** @var Populator[] */
+	/** @var GenPopulator[] */
 	private $generationPopulators = [];
 	/** @var NoiseGeneratorSimplex */
 	private $noiseBase;
@@ -73,41 +73,26 @@ class EndGenerator implements NewLevelGenerator{
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
 
 		$noise = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
-
-		for($chunkY = 0; $chunkY < 8; ++$chunkY){
-			$chunk = "";
-			$startY = $chunkY << 4;
-			$endY = $startY + 16;
+		
+		$blockIds = "";
+		$blockMetas = str_repeat("\x00", 16*16*128);
+		
+		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				for($x = 0; $x < 16; ++$x){
-					$lightChunk = "";
-					for($y = $startY; $y < $endY; ++$y){
-						$noiseValue = $noise[$x][$z][$y];
-						$noiseValue -= 1 - $this->density;
-	
-						if($noiseValue > 0){
-							$lightChunk .= "\x00";
-							$chunk .= "\x79";
-						}
-						else{//Air
-							$lightChunk .= "\x00";
-							$chunk .= "\x00";
-						}
-					}
-					$chunk .= str_repeat("\x00", 16); //meta
-					$chunk .= $lightChunk; //blocklight
-					$chunk .= str_repeat("\x00", 16); //skylight
-					$lightChunk = "";
-					//$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //light
-					//$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //more light
+				for($y = 0; $y < 128; ++$y){
+					$noiseValue = $noise[$x][$z][$y];
+					$noiseValue -= 1 - $this->density;
+					if($noiseValue > 0) $blockIds .= "\x79";
+					else $blockIds .= "\x00";
 				}
 			}
-			$this->level->setMiniChunk($chunkX, $chunkZ, $chunkY, $chunk);
 		}
+		
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, str_repeat(chr(BIOME_OCEAN), 256)); //BIOME_SKY crashes the game, BIOME_OCEAN seems to have same color as end
 		foreach($this->generationPopulators as $populator){
-			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
+			$populator->populate($this->level, $blockIds, $blockMetas, $chunkX, $chunkZ, $this->random);
 		}
+		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas);
 	}
 
 	public function populateChunk($chunkX, $chunkZ){

@@ -194,9 +194,8 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		for($xx = 0; $xx < $xSize; ++$xx){
 			$leftX = $xx % $xSamplingRate;
 			if($leftX == 0){
-				$nx = (int) ($xx / $xSamplingRate) * $xSamplingRate;
-				$nnx = $nx + $xSamplingRate;
-				$noiseNX = &$noiseArray[$nx];
+				$nnx = $xx + $xSamplingRate;
+				$noiseNX = &$noiseArray[$xx];
 				$noiseNNX = &$noiseArray[$nnx];
 				$dx1 = 1;
 				$dx2 = 0;
@@ -204,18 +203,15 @@ class ExperimentalGenerator implements NewLevelGenerator{
 				$dx1 = (($nnx - $xx) / $xSamplingRate);
 				$dx2 = ($leftX / $xSamplingRate);
 			}
-			
-			
 			$noiseXX = &$noiseArray[$xx];
 			
 			for($zz = 0; $zz < $zSize; ++$zz){
 				$leftZ = $zz % $zSamplingRate;
 				if($leftZ == 0){
-					$nz = (int) ($zz / $zSamplingRate) * $zSamplingRate;
-					$nnz = $nz + $zSamplingRate;
-					$noiseNXNZ = &$noiseNX[$nz];
+					$nnz = $zz + $zSamplingRate;
+					$noiseNXNZ = &$noiseNX[$zz];
 					$noiseNXNNZ = &$noiseNX[$nnz];
-					$noiseNNXNZ = &$noiseNNX[$nz];
+					$noiseNNXNZ = &$noiseNNX[$zz];
 					$noiseNNXNNZ = &$noiseNNX[$nnz];
 					$dz1 = 1;
 					$dz2 = 0;
@@ -228,17 +224,15 @@ class ExperimentalGenerator implements NewLevelGenerator{
 				$dz1dx2 = $dz1*$dx2;
 				$dz2dx1 = $dz2*$dx1;
 				$dz2dx2 = $dz2*$dx2;
-				
 				$noiseXXZZ = &$noiseXX[$zz];
 				
 				for($yy = 0; $yy < $ySize; ++$yy){
 					$leftY = $yy % $ySamplingRate;
 					if($leftY == 0){
-						$ny = (int) ($yy / $ySamplingRate) * $ySamplingRate;
-						$nny = $ny + $ySamplingRate;
-						$a = $dz1dx1 * $noiseNXNZ[$ny] + $dz1dx2 * $noiseNNXNZ[$ny];
+						$nny = $yy + $ySamplingRate;
+						$a = $dz1dx1 * $noiseNXNZ[$yy] + $dz1dx2 * $noiseNNXNZ[$yy];
 						$b = $dz1dx1 * $noiseNXNZ[$nny] + $dz1dx2 * $noiseNNXNZ[$nny];
-						$c = $dz2dx1 * $noiseNXNNZ[$ny] + $dz2dx2 * $noiseNNXNNZ[$ny];
+						$c = $dz2dx1 * $noiseNXNNZ[$yy] + $dz2dx2 * $noiseNNXNNZ[$yy];
 						$d = $dz2dx1 * $noiseNXNNZ[$nny] + $dz2dx2 * $noiseNNXNNZ[$nny];
 					}
 					

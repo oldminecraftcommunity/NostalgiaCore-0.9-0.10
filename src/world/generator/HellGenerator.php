@@ -77,47 +77,35 @@ class HellGenerator implements NewLevelGenerator{
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
 
 		$noise = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
-		for($chunkY = 0; $chunkY < 8; ++$chunkY){
-			$chunk = "";
-			$startY = $chunkY << 4;
-			$endY = $startY + 16;
+		$blockIds = "";
+		$blockMetas = str_repeat("\x00", 16*16*128);
+		$blockLight = str_repeat("\x00", 16*16*128);
+		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				for($x = 0; $x < 16; ++$x){
-					$lightChunk = "";
-					for($y = $startY; $y < $endY; ++$y){
-						if($y === 0 or $y === 127){//Bedrock
-							$lightChunk .= "\x00";
-							$chunk .= "\x07";
-							continue;
-						}
-						$noiseValue = (abs($this->emptyHeight - $y) / $this->emptyHeight) * $this->emptyAmplitude - $noise[$x][$z][$y];
-						$noiseValue -= 1 - $this->density;
-	
-						if($noiseValue > 0){//Netherrack
-							$lightChunk .= "\x00";
-							$chunk .= "\x57";
-						}elseif($y <= $this->waterHeight){//Lava
-							$lightChunk .= "\xff";
-							$chunk .= "\x0b";
-						}
-						else{//Air
-							$lightChunk .= "\x00";
-							$chunk .= "\x00";
-						}
+				for($y = 0; $y < 128; ++$y){
+					if($y == 0 || $y == 127){//Bedrock
+						$blockIds .= "\x07";
+						continue;
 					}
-					$chunk .= str_repeat("\x00", 16); //meta
-					$chunk .= $lightChunk; //blocklight
-					$chunk .= str_repeat("\x00", 16); //skylight
-					//$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //light
-					//$chunk .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; //more light
+					
+					$noiseValue = (abs($this->emptyHeight - $y) / $this->emptyHeight) * $this->emptyAmplitude - $noise[$x][$z][$y];
+					$noiseValue -= 1 - $this->density;
+					
+					if($noiseValue > 0) $blockIds .= "\x57"; //Netherrack
+					elseif($y <= $this->waterHeight){
+						$blockIds .= "\x0b"; //Lava
+						$blockLight[($x << 11) | ($z << 7) | $y] = "\x0f";
+					}
+					else $blockIds .= "\x00"; //Air
 				}
 			}
-			$this->level->setMiniChunk($chunkX, $chunkZ, $chunkY, $chunk);
 		}
+		
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, str_repeat(chr(BIOME_HELL), 256));
 		foreach($this->generationPopulators as $populator){
 			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
 		}
+		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas, $blockLight);
 	}
 
 	public function populateChunk($chunkX, $chunkZ){
@@ -125,7 +113,7 @@ class HellGenerator implements NewLevelGenerator{
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
 		foreach($this->populators as $populator){
 			$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
-			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
+			$populator->populate($this->level, $blockIds, $blockMetas, $chunkX, $chunkZ, $this->random);
 		}
 		
 		$biomecolors = "";
