@@ -192,47 +192,61 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		}
 		
 		for($xx = 0; $xx < $xSize; ++$xx){
-			if($xx % $xSamplingRate == 0){
+			$leftX = $xx % $xSamplingRate;
+			if($leftX == 0){
 				$nx = (int) ($xx / $xSamplingRate) * $xSamplingRate;
 				$nnx = $nx + $xSamplingRate;
 				$noiseNX = &$noiseArray[$nx];
 				$noiseNNX = &$noiseArray[$nnx];
+				$dx1 = 1;
+				$dx2 = 0;
+			}else{
+				$dx1 = (($nnx - $xx) / $xSamplingRate);
+				$dx2 = ($leftX / $xSamplingRate);
 			}
-			$dx1 = (($nnx - $xx) / ($nnx - $nx));
-			$dx2 = (($xx - $nx) / ($nnx - $nx));
+			
+			
 			$noiseXX = &$noiseArray[$xx];
 			
 			for($zz = 0; $zz < $zSize; ++$zz){
-				if($zz % $zSamplingRate == 0){
+				$leftZ = $zz % $zSamplingRate;
+				if($leftZ == 0){
 					$nz = (int) ($zz / $zSamplingRate) * $zSamplingRate;
 					$nnz = $nz + $zSamplingRate;
 					$noiseNXNZ = &$noiseNX[$nz];
 					$noiseNXNNZ = &$noiseNX[$nnz];
 					$noiseNNXNZ = &$noiseNNX[$nz];
 					$noiseNNXNNZ = &$noiseNNX[$nnz];
+					$dz1 = 1;
+					$dz2 = 0;
+				}else{
+					$dz1 = ($nnz - $zz) / $zSamplingRate;
+					$dz2 = $leftZ / $zSamplingRate;
 				}
-				$dz1 = ($nnz - $zz) / ($nnz - $nz);
-				$dz2 = ($zz - $nz) / ($nnz - $nz);
+				
+				$dz1dx1 = $dz1*$dx1;
+				$dz1dx2 = $dz1*$dx2;
+				$dz2dx1 = $dz2*$dx1;
+				$dz2dx2 = $dz2*$dx2;
+				
 				$noiseXXZZ = &$noiseXX[$zz];
 				
 				for($yy = 0; $yy < $ySize; ++$yy){
-					if($yy % $ySamplingRate == 0){
+					$leftY = $yy % $ySamplingRate;
+					if($leftY == 0){
 						$ny = (int) ($yy / $ySamplingRate) * $ySamplingRate;
 						$nny = $ny + $ySamplingRate;
-						$a = $dz1*($dx1 * $noiseNXNZ[$ny] + $dx2 * $noiseNNXNZ[$ny]);
-						$b = $dz1*($dx1 * $noiseNXNZ[$nny] + $dx2 * $noiseNNXNZ[$nny]);
-						$c = $dz2*($dx1 * $noiseNXNNZ[$ny] + $dx2 * $noiseNNXNNZ[$ny]);
-						$d = $dz2*($dx1 * $noiseNXNNZ[$nny] + $dx2 * $noiseNNXNNZ[$nny]);
-						$mxy = ($nny - $ny);
+						$a = $dz1dx1 * $noiseNXNZ[$ny] + $dz1dx2 * $noiseNNXNZ[$ny];
+						$b = $dz1dx1 * $noiseNXNZ[$nny] + $dz1dx2 * $noiseNNXNZ[$nny];
+						$c = $dz2dx1 * $noiseNXNNZ[$ny] + $dz2dx2 * $noiseNNXNNZ[$ny];
+						$d = $dz2dx1 * $noiseNXNNZ[$nny] + $dz2dx2 * $noiseNNXNNZ[$nny];
 					}
 					
-					if($xx % $xSamplingRate != 0 || $zz % $zSamplingRate != 0 || $yy % $ySamplingRate != 0){
-						$dy1 = (($nny - $yy) / $mxy);
-						$dy2 = (($yy - $ny) / $mxy);
+					if($leftX != 0 || $leftZ != 0 || $leftY != 0){
+						$dy1 = (($nny - $yy) / $ySamplingRate);
+						$dy2 = ($leftY / $ySamplingRate);
 						
-						$noiseXXZZ[$yy] = 
-							($dy1 * $a + $dy2 * $b) + 
-							($dy1 * $c + $dy2 * $d);
+						$noiseXXZZ[$yy] = ($dy1 * $a + $dy2 * $b) + ($dy1 * $c + $dy2 * $d);
 					}
 				}
 			}

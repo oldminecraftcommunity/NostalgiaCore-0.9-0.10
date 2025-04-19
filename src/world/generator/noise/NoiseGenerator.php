@@ -77,9 +77,7 @@ abstract class NoiseGenerator{
 			$freq *= $frequency;
 			$amp *= $amplitude;
 		}
-		if($normalized === true){
-			$result /= $max;
-		}
+		if($normalized) $result /= $max;
 		
 		return $result;
 	}
