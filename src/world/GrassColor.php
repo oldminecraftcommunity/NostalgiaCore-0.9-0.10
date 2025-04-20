@@ -12,17 +12,29 @@ class GrassColor{
 		$ind = self::index($f1, $f)*4;
 		return substr(self::$data, $ind, 4);
 	}
-
+	
+	public static $biomeCache = [];
+	public static function clearBiomeCache(){
+		self::$biomeCache = [];
+	}
 	public static function getBlendedGrassColor(Level $level, $x, $z){
 		$red = $green = $blue = 0;
 		for($zoff = -2; $zoff < 3; ++$zoff){
 			for($xoff = -2; $xoff < 3; ++$xoff){
-				$bid = $level->getBiomeId($x+$xoff, $z+$zoff);
-				$biome = BiomeSelector::get($bid);
-				$col = $biome->getGrassColor($x, $z);
-				$r = ord($col[1]);
-				$g = ord($col[2]);
-				$b = ord($col[3]);
+				$xx = $x+$xoff;
+				$zz = $z+$zoff;
+				$in = "$xx.$zz";
+				if(!isset(self::$biomeCache[$in])){
+					$bid = $level->getBiomeId($xx, $zz);
+					$biome = BiomeSelector::get($bid);
+					$col = $biome->getGrassColor($x, $z);
+					$r = ord($col[1]);
+					$g = ord($col[2]);
+					$b = ord($col[3]);
+					self::$biomeCache[$in] = [$bid, $r, $g, $b];
+				}else{
+					[$bid, $r, $g, $b] = self::$biomeCache[$in];
+				}
 				$red += $r * 4;
 				$green += $g * 4;
 				$blue += $b * 4;

@@ -125,6 +125,7 @@ class HellGenerator implements NewLevelGenerator{
 				$biomecolors .= $color;
 			}
 		}
+		GrassColor::clearBiomeCache();
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 

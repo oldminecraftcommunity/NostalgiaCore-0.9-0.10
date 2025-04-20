@@ -119,6 +119,7 @@ class SuperflatGenerator implements LevelGenerator{
 				$biomecolors .= $color;
 			}
 		}
+		GrassColor::clearBiomeCache();
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 

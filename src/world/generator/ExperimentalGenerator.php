@@ -170,6 +170,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
 		}
 		
+		
 		$biomecolors = "";
 		for($z = 0; $z < 16; ++$z){
 			for($x = 0; $x < 16; ++$x){
@@ -177,6 +178,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 				$biomecolors .= $color;
 			}
 		}
+		GrassColor::clearBiomeCache();
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 	

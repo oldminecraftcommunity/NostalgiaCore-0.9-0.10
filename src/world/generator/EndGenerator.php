@@ -71,7 +71,7 @@ class EndGenerator implements NewLevelGenerator{
 
 	public function generateChunk($chunkX, $chunkZ){
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
-
+		
 		$noise = $this->noiseBase->getFastNoise3D(16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		
 		$blockIds = "";
@@ -109,6 +109,7 @@ class EndGenerator implements NewLevelGenerator{
 				$biomecolors .= $color;
 			}
 		}
+		GrassColor::clearBiomeCache();
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 
