@@ -106,7 +106,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 	
 	public function generateChunk($chunkX, $chunkZ){
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->level->getSeed());
-		$noiseArray = ExperimentalGenerator::getFastNoise3D($this->noiseBase, 16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
+		$noiseArray = $this->noiseBase->getFastNoise3D(16, 128, 16, 4, 8, 4, $chunkX * 16, 0, $chunkZ * 16);
 		$biomeCache = [];
 		$blockIds = "";
 		$blockMetas = str_repeat("\x00", 16*16*64);
@@ -180,78 +180,16 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		$this->level->level->setGrassColorArrayForChunk($chunkX, $chunkZ, $biomecolors);
 	}
 	
-	public static function getFastNoise3D(NoiseGenerator $noise, $xSize, $ySize, $zSize, $xSamplingRate, $ySamplingRate, $zSamplingRate, $x, $y, $z){
-		$noiseArray = array_fill(0, $xSize, array_fill(0, $zSize, []));
-		
-		for($xx = 0; $xx <= $xSize; $xx += $xSamplingRate){
-			for($zz = 0; $zz <= $zSize; $zz += $zSamplingRate){
-				for($yy = 0; $yy <= $ySize; $yy += $ySamplingRate){
-					$noiseArray[$xx][$zz][$yy] = $noise->noise3D(($x + $xx) / 32, ($y + $yy) / 32, ($z + $zz) / 32, 2, 0.25, true);
-				}
-			}
-		}
-		
-		for($xx = 0; $xx < $xSize; ++$xx){
-			$leftX = $xx % $xSamplingRate;
-			if($leftX == 0){
-				$nnx = $xx + $xSamplingRate;
-				$noiseNX = &$noiseArray[$xx];
-				$noiseNNX = &$noiseArray[$nnx];
-				$dx1 = 1;
-				$dx2 = 0;
-			}else{
-				$dx1 = (($nnx - $xx) / $xSamplingRate);
-				$dx2 = ($leftX / $xSamplingRate);
-			}
-			$noiseXX = &$noiseArray[$xx];
-			
-			for($zz = 0; $zz < $zSize; ++$zz){
-				$leftZ = $zz % $zSamplingRate;
-				if($leftZ == 0){
-					$nnz = $zz + $zSamplingRate;
-					$noiseNXNZ = &$noiseNX[$zz];
-					$noiseNXNNZ = &$noiseNX[$nnz];
-					$noiseNNXNZ = &$noiseNNX[$zz];
-					$noiseNNXNNZ = &$noiseNNX[$nnz];
-					$dz1 = 1;
-					$dz2 = 0;
-				}else{
-					$dz1 = ($nnz - $zz) / $zSamplingRate;
-					$dz2 = $leftZ / $zSamplingRate;
-				}
-				
-				$dz1dx1 = $dz1*$dx1;
-				$dz1dx2 = $dz1*$dx2;
-				$dz2dx1 = $dz2*$dx1;
-				$dz2dx2 = $dz2*$dx2;
-				$noiseXXZZ = &$noiseXX[$zz];
-				
-				for($yy = 0; $yy < $ySize; ++$yy){
-					$leftY = $yy % $ySamplingRate;
-					if($leftY == 0){
-						$nny = $yy + $ySamplingRate;
-						$a = $dz1dx1 * $noiseNXNZ[$yy] + $dz1dx2 * $noiseNNXNZ[$yy];
-						$b = $dz1dx1 * $noiseNXNZ[$nny] + $dz1dx2 * $noiseNNXNZ[$nny];
-						$c = $dz2dx1 * $noiseNXNNZ[$yy] + $dz2dx2 * $noiseNNXNNZ[$yy];
-						$d = $dz2dx1 * $noiseNXNNZ[$nny] + $dz2dx2 * $noiseNNXNNZ[$nny];
-					}
-					
-					if($leftX != 0 || $leftZ != 0 || $leftY != 0){
-						$dy1 = (($nny - $yy) / $ySamplingRate);
-						$dy2 = ($leftY / $ySamplingRate);
-						
-						$noiseXXZZ[$yy] = ($dy1 * $a + $dy2 * $b) + ($dy1 * $c + $dy2 * $d);
-					}
-				}
-			}
-		}
-		return $noiseArray;
-	}
 	public function getSpawn(){
 		return $this->level->getSafeSpawn(new Vector3(127.5, 128, 127.5));
 	}
 	public function populateLevel()
 	{}
 	
-	
+	/**
+	 * @deprecated use {@link NoiseGenerator::getFastNoise3D()} instead
+	 */
+	public static function getFastNoise3D(NoiseGenerator $noise, $xSize, $ySize, $zSize, $xSamplingRate, $ySamplingRate, $zSamplingRate, $x, $y, $z){
+		return $noise->getFastNoise3D($xSize, $ySize, $zSize, $xSamplingRate, $ySamplingRate, $zSamplingRate, $x, $y, $z);
+	}
 }

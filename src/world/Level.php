@@ -112,7 +112,7 @@ class Level{
 	
 	public function checkSleep(){ //TODO events?
 		if(count($this->players) == 0) return false;
-		if($this->server->api->time->getPhase($this->level)  === "night"){ //TODO vanilla
+		if($this->server->api->time->getPhase($this->level) === "night"){ //TODO vanilla
 			foreach($this->players as $p){
 				if($p->isSleeping == false || $p->sleepingTime < 100){
 					return false;
@@ -129,7 +129,7 @@ class Level{
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		
-		if(!$this->level->isChunkLoaded($X, $Z) && $this->level->loadChunk($X, $Z, false) === false){
+		if(!$this->level->isChunkLoaded($X, $Z) && !$this->level->loadChunk($X, $Z, false)){
 			$this->level->createUnpopulatedChunk($X, $Z);
 		}
 		return $this->level->getBiomeId($x, $z);
@@ -167,7 +167,9 @@ class Level{
 		if($gen) $this->level->generateChunk($X, $Z, $this->generator);
 		
 		if(!$this->level->isChunkPopulated($X, $Z)) $this->level->unloadChunk($X, $Z);
-		if(!$this->level->isChunkLoaded($X, $Z)) $this->level->loadChunk($X, $Z, true);
+		if(!$this->level->isChunkLoaded($X, $Z)) {
+			if(!$this->level->loadChunk($X, $Z, true)) return false;
+		}
 
 		$ci = $this->level->getIndex($X, $Z);
 		$orderedBiomeIds = $this->level->biomeInfo[$ci];
@@ -467,8 +469,8 @@ class Level{
 			}
 		}
 		
-		foreach($this->level->fakeLoaded as $ind => $val){
-			$xz = explode(".", $val);
+		foreach($this->level->fakeLoaded as $ind => $_){
+			$xz = explode(".", $ind);
 			$this->level->unloadChunk($xz[0], $xz[1]);
 			unset($this->level->fakeLoaded[$ind]);
 		}
@@ -506,11 +508,11 @@ class Level{
 		$pos->x = (int)$pos->x;
 		$pos->y = (int)$pos->y;
 		$pos->z = (int)$pos->z;
-		if(!isset($this->level) or (($pos instanceof Position) and $pos->level !== $this) or $pos->y < 0){
+		if(!isset($this->level) || (($pos instanceof Position) && $pos->level !== $this) || $pos->y < 0){
 			return false;
 		}
 		$ret = $this->level->setBlock($pos->x, $pos->y, $pos->z, $block->getID(), $block->getMetadata());
-		if($ret === true){ 
+		if($ret){
 			if(!($pos instanceof Position)){
 				$pos = new Position($pos->x, $pos->y, $pos->z, $this);
 			}

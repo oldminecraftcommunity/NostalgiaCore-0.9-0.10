@@ -555,9 +555,9 @@ class PMFLevel extends PMF{
 		$Z = (int) $Z;
 		if(!$this->isChunkLoaded($X, $Z)){
 			return false;
-		}elseif($save !== false){
-			$this->saveChunk($X, $Z);
 		}
+		if($save) $this->saveChunk($X, $Z);
+		
 		$index = $this->getIndex($X, $Z);
 		unset($this->chunks[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 		return true;
@@ -740,7 +740,9 @@ class PMFLevel extends PMF{
 		$Z = $z >> 4;
 		
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->blockIds[$index])) return 0; //TODO getBlock will try to load chunk
+		if(!isset($this->blockIds[$index])){
+			if(!$this->loadChunk($X, $Z)) return AIR;
+		}
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
@@ -761,7 +763,7 @@ class PMFLevel extends PMF{
 		
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->blockIds[$index])){
-			if($this->loadChunk($X, $Z, false) === false){
+			if(!$this->loadChunk($X, $Z, false)){
 				$this->createUnpopulatedChunk($X, $Z);
 			}
 		}
@@ -782,7 +784,7 @@ class PMFLevel extends PMF{
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->blockMetas[$index])) return 0; //TODO getBlock will try to load chunk
+		if(!isset($this->blockMetas[$index])) return 0;
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
@@ -834,7 +836,7 @@ class PMFLevel extends PMF{
 		if($y >= 128 or $y < 0) return [AIR, 0];
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->blockIds[$index])){
-			if($this->loadChunk($X, $Z) === false) return [AIR, 0];
+			if(!$this->loadChunk($X, $Z)) return [AIR, 0];
 		}
 		
 		$cx = $x & 0xf;
@@ -849,7 +851,7 @@ class PMFLevel extends PMF{
 	public function createUnpopulatedChunk($X, $Z){
 		$this->initCleanChunk($X, $Z);
 		$this->level->generator->generateChunk($X, $Z);
-		$this->fakeLoaded[self::getIndex($X, $Z)] = "$X.$Z"; //TODO do not use string
+		$this->fakeLoaded[self::getIndex($X, $Z)] = true;
 	}
 	
 	public function setBlock($x, $y, $z, $block, $meta = 0){
@@ -865,7 +867,7 @@ class PMFLevel extends PMF{
 		
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->blockIds[$index])){
-			if($this->loadChunk($X, $Z, false) === false){
+			if(!$this->loadChunk($X, $Z, false)){
 				$this->createUnpopulatedChunk($X, $Z);
 			}
 		}

@@ -520,6 +520,7 @@ class Player{
 		$pk->chunkX = $X;
 		$pk->chunkZ = $Z;
 		$pk->data = $this->level->getOrderedFullChunk($X, $Z);
+		if($pk->data === false) return false;
 		$cnt = $this->dataPacket($pk);
 		$this->chunkCount = [];
 		foreach($cnt as $i => $count){
