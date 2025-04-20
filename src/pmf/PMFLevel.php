@@ -626,16 +626,10 @@ class PMFLevel extends PMF{
 			return false;
 		}
 		$this->initCleanChunk($X, $Z);
-		$this->fillFullChunk($X, $Z);
 		$generator->generateChunk($X, $Z);
 		$generator->populateChunk($X, $Z);
 	}
-	
-	public function fillFullChunk($X, $Z){
-		for($Y = 0; $Y < 8; ++$Y){
-			$this->fillMiniChunk($X, $Z, $Y);
-		}
-	}
+
 	
 	public function loadChunk($X, $Z, $populate = false){
 		$index = $this->getIndex($X, $Z);
@@ -726,21 +720,7 @@ class PMFLevel extends PMF{
 		if($metas != false) $this->blockMetas[$ind] = $metas;
 		if($blocklight != false) $this->blockLight[$ind] = $blocklight;
 		if($skylight != false) $this->skyLight[$ind] = $skylight;
-	}
-	
-	
-	public function setMiniChunk($X, $Z, $Y, $data){
-		//TODO get rid of this
-		if($this->isChunkLoaded($X, $Z) === false){
-			$this->loadChunk($X, $Z);
-		}
-		if(strlen($data) !== 16384){
-			return false;
-		}
-		$index = $this->getIndex($X, $Z);
-		$this->chunks[$index][$Y] = (string) $data;
-		$this->chunkChange[$index] = true;
-		return true;
+		$this->chunkChange[$ind] = true;
 	}
 	
 	public function getBlockIDsXZ($x, $z){
@@ -923,4 +903,17 @@ class PMFLevel extends PMF{
 		}
 	}
 
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function setMiniChunk($X, $Z, $Y, $data){
+		return false;
+	}
+	
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function fillFullChunk($X, $Z){
+		return false;
+	}
 }

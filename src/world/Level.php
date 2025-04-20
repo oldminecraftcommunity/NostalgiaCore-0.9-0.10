@@ -174,7 +174,7 @@ class Level{
 		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
 		
 		$orderedIds = $this->level->blockIds[$ci]; 
-		$orderedData = $this->level->blockMetas[$ci]; //TODO compress 16*16*128 array into 16*16*64 or make data & light store here as 16*16*64 arrays
+		$orderedData = $this->level->blockMetas[$ci];
 		$orderedLight = $this->level->blockLight[$ci];
 		$orderedSkyLight = $this->level->skyLight[$ci];
 		
