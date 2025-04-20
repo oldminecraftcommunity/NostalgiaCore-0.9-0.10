@@ -52,7 +52,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		return array();
 	}
 	
-	public function init(Level $level, Random $random){
+	public function init(Level $level, IRandom $random){
 		$this->level = $level;
 		$this->random = new XorShift128Random($level->getSeed());
 		$this->random->setSeed($this->level->level->getSeed());

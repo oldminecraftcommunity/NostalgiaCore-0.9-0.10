@@ -53,7 +53,7 @@ class HellGenerator implements NewLevelGenerator{
 		return [];
 	}
 
-	public function init(Level $level, Random $random){
+	public function init(Level $level, IRandom $random){
 		$this->level = $level;
 		$this->random = $random;
 		$this->random->setSeed($this->level->getSeed());

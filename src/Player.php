@@ -1497,7 +1497,7 @@ class Player{
 					$this->entity->updateAABB();
 				}
 				break;
-			case 0xa7:
+			case ProtocolInfo::SET_ENTITY_DATA_PACKET:
 				//TODO 0xa7
 				break;
 			case ProtocolInfo::PLAYER_EQUIPMENT_PACKET:
@@ -1554,7 +1554,6 @@ class Player{
 						}
 					}
 				}else{
-					//$this->sendInventorySlot($packet->slot);
 					$this->sendInventory();
 				}
 				if($this->entity->inAction === true){

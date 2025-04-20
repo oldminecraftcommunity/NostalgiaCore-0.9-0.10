@@ -127,7 +127,6 @@ class PMFLevel extends PMF{
 		}
 		
 		$info = $this->locationTable[$index];
-		//$this->seek($info[0]);
 		
 		$chunk = @gzopen($this->getChunkPath($X, $Z), "rb");
 		if($chunk === false){
@@ -195,18 +194,34 @@ class PMFLevel extends PMF{
 		$info = [0 => Utils::readShort(substr($chunk, $offset, 2))];
 		$offset+=2;
 		
-		if($ver == 2){ //v2 has populated flag
+		if($ver >= 2){ //v2 has populated flag
 			$populated = ord($chunk[$offset]) > 0;
 			++$offset;
 		}else{
 			$populated = true;
 		}
+		if($ver == 3){
+			$hasbiomecolors = ord($chunk[$offset]) > 0;
+			++$offset;
+		}else{
+			$hasbiomecolors = false;
+		}
 		
 		
 		$this->initCleanChunk($X, $Z);
+		
 		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
-		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$offset += 256;
+		
+		if($ver == 3){
+			$this->biomeColorInfo[$index] = substr($chunk, $offset, 1024); //Biome colors
+			$offset += 1024;
+		}
+		
+		if(!$hasbiomecolors){
+			$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
+		}
+		
 		
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
 			$t = 1 << $Y;
@@ -281,7 +296,6 @@ class PMFLevel extends PMF{
 					for($Z = 0; $Z < 16; ++$Z){
 						for($X = 0; $X < 16; ++$X){
 							$index = $this->getIndex($X, $Z);
-							$this->chunks[$index] = false;
 							$this->chunkChange[$index] = false;
 							$this->locationTable[$index] = [
 								0 => Utils::readShort($this->read(2)), //16 bit flags
@@ -307,6 +321,7 @@ class PMFLevel extends PMF{
 					break;
 				case 1:
 				case 2:
+				case 3:
 					ConsoleAPI::notice("Converting the world from NCPMF-{$this->levelData["version"]} to NCPMF-$cv...");
 					$worldDir = substr($worldFile, 0, -strlen("/level.pmf"));
 					$backupDir = "auto-world-backup-".microtime(true);
@@ -398,7 +413,6 @@ class PMFLevel extends PMF{
 		for($Z = 0; $Z < 16; ++$Z){
 			for($X = 0; $X < 16; ++$X){
 				$index = $this->getIndex($X, $Z);
-				$this->chunks[$index] = false;
 				$this->chunkChange[$index] = false;
 			}
 		}
@@ -460,7 +474,7 @@ class PMFLevel extends PMF{
 		$X = (int) $X;
 		$Z = (int) $Z;
 		$index = $this->getIndex($X, $Z);
-		unset($this->chunks[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
+		unset($this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 	}
 	public function unloadChunk($X, $Z, $save = true){
 		$X = (int) $X;
@@ -471,7 +485,7 @@ class PMFLevel extends PMF{
 		if($save) $this->saveChunk($X, $Z);
 		
 		$index = $this->getIndex($X, $Z);
-		unset($this->chunks[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
+		unset($this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 		return true;
 	}
 

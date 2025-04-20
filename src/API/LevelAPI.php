@@ -22,9 +22,12 @@ class LevelAPI{
 		$this->server->api->console->register("setwspawn", "Set the spawn position for your current world. ", [$this, "commandHandler"]);
 		$this->server->api->console->register("place", "", [$this, "commandHandler"]);
 		$this->default = $this->server->api->getProperty("level-name");
-		if($this->loadLevel($this->default) === false){
+		if($this->levelExists($this->default) === false){
 			$this->generateLevel($this->default, $this->server->seed);
-			$this->loadLevel($this->default);
+		}
+		if($this->loadLevel($this->default) === false){
+			ConsoleAPI::error("Failed to load {$this->default}!");
+			throw new Exception();
 		}
 		$this->server->spawn = $this->getDefault()->getSafeSpawn();
 	}
@@ -158,7 +161,7 @@ class LevelAPI{
 	}
 
 	public function getDefault(){
-		return $this->levels[$this->default];
+		return $this->levels[$this->default] ?? false;
 	}
 
 	public function commandHandler($cmd, $params, $issuer, $alias){

@@ -33,7 +33,7 @@ class VoidGenerator implements LevelGenerator{
 		}*/
 	}
 	
-	public function init(Level $level, Random $random){
+	public function init(Level $level, IRandom $random){
 		$this->level = $level;
 		$this->random = $random;
 	}

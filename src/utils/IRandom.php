@@ -1,4 +1,5 @@
 <?php
+
 interface IRandom{
 	/**
 	 * Generates a random 32-bit positive integer.

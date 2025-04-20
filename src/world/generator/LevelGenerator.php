@@ -4,7 +4,7 @@ interface LevelGenerator{
 
 	public function __construct(array $options = []);
 
-	public function init(Level $level, Random $random);
+	public function init(Level $level, IRandom $random);
 
 	public function generateChunk($chunkX, $chunkZ);
 

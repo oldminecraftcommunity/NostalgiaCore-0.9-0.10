@@ -26,7 +26,7 @@ class NormalGenerator implements NewLevelGenerator{
 		return array();
 	}
 	
-	public function init(Level $level, Random $random){
+	public function init(Level $level, IRandom $random){
 		$this->level = $level;
 		$this->random = new XorShift128Random($level->getSeed()); //$random;
 		$this->random->setSeed($this->level->getSeed());
