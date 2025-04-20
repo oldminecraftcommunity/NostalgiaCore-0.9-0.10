@@ -133,45 +133,46 @@ class PMFLevel extends PMF{
 		if($chunk === false){
 			return false;
 		}
-		$this->chunks[$index] = [];
-		$this->chunkChange[$index] = false;
-		$this->biomeInfo[$index] = str_repeat(ord(BIOME_PLAINS), 256);
+		
+		$this->initCleanChunk($X, $Z);
+		$this->biomeInfo[$index] = str_repeat(chr(BIOME_PLAINS), 256);
 		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$this->setPopulated($X, $Z);
 		
+		$ids = &$this->blockIds[$index];
+		$metas = &$this->blockMetas[$index];
+		$skylight = &$this->skyLight[$index];
+		$blocklight = $this->blockLight[$index];
+		
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
+			$yy = $Y*16;
 			$t = 1 << $Y; 
 			if(($info[0] & $t) === $t){
-				// 4096 + 2048 + 2048, Block Data, Meta, Light
 				if(strlen($chunkDataHere = gzread($chunk, 8192)) < 8192){
 					console("[NOTICE] Empty corrupt chunk detected [$X,$Z,:$Y], recovering contents", true, true, 2);
-					$this->fillMiniChunk($X, $Z, $Y);
 				}else{
-					
-					$this->chunks[$index][$Y] = str_repeat("\x00", 16384);
-					$this->chunkChange[$index] = true;
-
-					//Convert id-meta to id-meta-light-light
+					//pmf0 uses id-meta, pmf1-3(and fillMiniChunk methods) use id-meta-light-light
 					for($x = 0; $x < 16; ++$x){
 						for($z = 0; $z < 16; ++$z){
-							for($y = 0; $y < 16; ++$y){
-								$id = $chunkDataHere[($y + ($x << 5) + ($z << 9))] ?? "\x00";
-								$meta = $chunkDataHere[(($y >> 1) + 16 + ($x << 5) + ($z << 9))] ?? "\x00";
+							$oldindex = ($x << 5) + ($z << 9);
+							$bindex = ($x << 11) | ($z << 7) | $yy;
+							for($y = 0; $y < 16; ++$y, ++$bindex){
+								$mindex = $bindex >> 1;
+								$id = $chunkDataHere[($y + $oldindex)] ?? "\x00";
+								$meta = $chunkDataHere[(($y >> 1) + 16 + $oldindex)] ?? "\x00";
 								
-								$bindex = (int) ($y + ($x << 6) + ($z << 10));
-								$mindex = (int) (($y >> 1) + 16 + ($x << 6) + ($z << 10));
-								
-								$this->chunks[$index][$Y][$bindex] = $id;
-								$this->chunks[$index][$Y][$mindex] = $meta;
+								$ids[$bindex] = $id;
+								$metas[$mindex] = $meta;
+								$skylight[$mindex] = $blocklight[$mindex] = 0;
 							}
 						}
 					}
 				}
-			}else{
-				$this->chunks[$index][$Y] = false;
 			}
 		}
 		@gzclose($chunk);
+		$this->chunkChange[$index] = true;
+		
 		return true;
 	}
 	
@@ -203,57 +204,20 @@ class PMFLevel extends PMF{
 		
 		
 		$this->initCleanChunk($X, $Z);
-		$this->chunkChange[$index] = false;
 		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
 		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$offset += 256;
 		
-		$ids = &$this->blockIds[$index];
-		$metas = &$this->blockMetas[$index];
-		$skylight = &$this->skyLight[$index];
-		$blocklight = $this->blockLight[$index];
-		
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
-			$yy = $Y*16;
 			$t = 1 << $Y;
-			$aironly = true;
 			if(($info[0] & $t) === $t){
 				// 4096 + 4096 + 4096 + 4096, Id, Meta, BlockLight, Skylight
-				$aironly = false;
 				if(strlen($chunka = substr($chunk, $offset, 16384)) < 16384){
 					console("[NOTICE] Empty corrupt chunk detected [$X,$Z,:$Y], recovering contents", true, true, 2);
-					$aironly = true;
+				}else{
+					$this->setMiniChunk($X, $Z, $Y, $chunka);
 				}
 				$offset += 16384;
-			}
-			
-			
-			for($x = 0; $x < 16; ++$x){
-				for($z = 0; $z < 16; ++$z){
-					$bindex = ($x << 11) | ($z << 7) | $yy;
-					if($aironly){
-						for($y = 0; $y < 16; ++$y, ++$bindex){
-							$mindex = $bindex >> 1;
-							$ids[$bindex] = "\x00";
-							$metas[$mindex] = $skylight[$mindex] = $blocklight[$mindex] = "\x00";
-						}
-					}else{
-						for($y = 0; $y < 16; ++$y, ++$bindex){
-							$mindex = $bindex >> 1;
-							
-							$id = $chunka[($y + ($x << 6) + ($z << 10))];
-							$m = $chunka[(($y >> 1) + 16 + ($x << 6) + ($z << 10))];
-							$sl = $chunka[(($y >> 1) + 32 + ($x << 6) + ($z << 10))];
-							$bl = $chunka[(($y >> 1) + 48 + ($x << 6) + ($z << 10))];
-							
-							$ids[$bindex] = $id;
-							$metas[$mindex] = $m;
-							$skylight[$mindex] = $sl;
-							$blocklight[$mindex] = $bl;
-						}
-					}
-					
-				}
 			}
 		}
 		
@@ -632,15 +596,59 @@ class PMFLevel extends PMF{
 		return true;
 	}
 	
+	/**
+	 * Should not be used for anything except world convertion
+	 */
 	protected function fillMiniChunk($X, $Z, $Y){
-		//TODO get rid of this - cant, used by world converter
-		if($this->isChunkLoaded($X, $Z) === false){
-			return false;
-		}
+		$yy = $Y*16;
 		$index = $this->getIndex($X, $Z);
+		$ids = &$this->blockIds[$index];
+		$metas = &$this->blockMetas[$index];
+		$skylight = &$this->skyLight[$index];
+		$blocklight = $this->blockLight[$index];
+		for($x = 0; $x < 16; ++$x){
+			for($z = 0; $z < 16; ++$z){
+				$bindex = ($x << 11) | ($z << 7) | $yy;
+				for($y = 0; $y < 16; ++$y, ++$bindex){
+					$mindex = $bindex >> 1;
+					$ids[$bindex] = "\x00";
+					$metas[$mindex] = $skylight[$mindex] = $blocklight[$mindex] = "\x00";
+				}
+			}
+		}
 		
-		$this->chunks[$index][$Y] = str_repeat("\x00", 16384);
-		$this->chunkChange[$index] = true;
+		return true;
+	}
+
+	/**
+	 * Should not be used for anything except world convertion
+	 */
+	public function setMiniChunk($X, $Z, $Y, $data){
+		$yy = $Y*16;
+		$index = $this->getIndex($X, $Z);
+		$ids = &$this->blockIds[$index];
+		$metas = &$this->blockMetas[$index];
+		$skylight = &$this->skyLight[$index];
+		$blocklight = $this->blockLight[$index];
+		for($x = 0; $x < 16; ++$x){
+			for($z = 0; $z < 16; ++$z){
+				$bindex = ($x << 11) | ($z << 7) | $yy;
+				$oldindex = ($x << 6) + ($z << 10);
+				for($y = 0; $y < 16; ++$y, ++$bindex){
+					$mindex = $bindex >> 1;
+					
+					$id = $data[($y + $oldindex)];
+					$m = $data[(($y >> 1) + 16 + $oldindex)];
+					$sl = $data[(($y >> 1) + 32 + $oldindex)];
+					$bl = $data[(($y >> 1) + 48 + $oldindex)];
+					
+					$ids[$bindex] = $id;
+					$metas[$mindex] = $m;
+					$skylight[$mindex] = $sl;
+					$blocklight[$mindex] = $bl;
+				}
+			}
+		}
 		return true;
 	}
 	
@@ -850,13 +858,7 @@ class PMFLevel extends PMF{
 			$this->saveChunk($X, $Z);
 		}
 	}
-
-	/**
-	 * @deprecated minichunks were removed
-	 */
-	public function setMiniChunk($X, $Z, $Y, $data){
-		return false;
-	}
+	
 	
 	/**
 	 * @deprecated minichunks were removed
