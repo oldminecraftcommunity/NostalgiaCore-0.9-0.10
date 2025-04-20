@@ -21,7 +21,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 	public $noiseHills;
 	public $noisePatches;
 	public $noisePatchesSmall;
-	public $noiseBase;
+	public $noiseBase; 
 	public $selector;
 	
 	public static $GAUSSIAN_KERNEL = null;

@@ -113,7 +113,7 @@ class NormalGenerator implements NewLevelGenerator{
 				$biomeID = ord($biomes[$i]);
 				for($y = 0; $y < 128; ++$y){
 					$diff = $height - $y;
-					if($y <= 4 and ($y === 0 or $this->random->nextFloat() < 0.33)){
+					if($y <= 4 and ($y == 0 or $this->random->nextFloat() < 0.33)){
 						$blockIds .= "\x07"; //bedrock
 					}elseif($diff > 2){
 						$blockIds .= "\x01"; //stone
@@ -126,14 +126,14 @@ class NormalGenerator implements NewLevelGenerator{
 							$blockIds .= $biomeID == BIOME_DESERT ? chr(SANDSTONE) : chr(DIRT);
 						}
 					}elseif($y <= $this->waterHeight){
-						if(($this->waterHeight - $y) <= 1 and $diff === 0){
+						if(($this->waterHeight - $y) <= 1 && $diff == 0){
 							if($biomeID === BIOME_TAIGA){
 								if($y == $this->waterHeight) $blockIds .= chr(GRASS);
 								else $blockIds .= chr(DIRT);
 							}else{
 								$blockIds .= chr(SAND);
 							}
-						}elseif($diff === 0){
+						}elseif($diff == 0){
 							$blockIds .= "\x03"; //dirt
 						}else{
 							//if($y === $this->waterHeight && $biomeID == BIOME_TAIGA){
@@ -142,7 +142,7 @@ class NormalGenerator implements NewLevelGenerator{
 							$blockIds .= "\x09"; //still_water
 							//}
 						}
-					}elseif($diff === 0){
+					}elseif($diff == 0){
 						if($patches[$i] > 0.7){
 							$blockIds .= "\x01"; //stone
 						}elseif($patches[$i] < -0.8){
@@ -197,7 +197,7 @@ class NormalGenerator implements NewLevelGenerator{
 			}
 		}
 		foreach($this->populators as $populator){
-			$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed()); //ty shoghicp for 250k bytes of randomness (where ~65536 are usable)
+			$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
 			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
 		}
 

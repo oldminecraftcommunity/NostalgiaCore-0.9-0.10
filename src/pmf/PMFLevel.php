@@ -202,22 +202,58 @@ class PMFLevel extends PMF{
 		}
 		
 		
-		$this->chunks[$index] = [];
+		$this->initCleanChunk($X, $Z);
 		$this->chunkChange[$index] = false;
 		$this->biomeInfo[$index] = substr($chunk, $offset, 256); //Biome data
 		$this->biomeColorInfo[$index] = ""; //biome color data, passing strlen==0 to force regenerate on next normal chunk load
 		$offset += 256;
+		
+		$ids = &$this->blockIds[$index];
+		$metas = &$this->blockMetas[$index];
+		$skylight = &$this->skyLight[$index];
+		$blocklight = $this->blockLight[$index];
+		
 		for($Y = 0; $Y < $this->levelData["height"]; ++$Y){
+			$yy = $Y*16;
 			$t = 1 << $Y;
+			$aironly = true;
 			if(($info[0] & $t) === $t){
 				// 4096 + 4096 + 4096 + 4096, Id, Meta, BlockLight, Skylight
-				if(strlen($this->chunks[$index][$Y] = substr($chunk, $offset, 16384)) < 16384){
+				$aironly = false;
+				if(strlen($chunka = substr($chunk, $offset, 16384)) < 16384){
 					console("[NOTICE] Empty corrupt chunk detected [$X,$Z,:$Y], recovering contents", true, true, 2);
-					$this->fillMiniChunk($X, $Z, $Y);
+					$aironly = true;
 				}
 				$offset += 16384;
-			}else{
-				$this->chunks[$index][$Y] = false;
+			}
+			
+			
+			for($x = 0; $x < 16; ++$x){
+				for($z = 0; $z < 16; ++$z){
+					$bindex = ($x << 11) | ($z << 7) | $yy;
+					if($aironly){
+						for($y = 0; $y < 16; ++$y, ++$bindex){
+							$mindex = $bindex >> 1;
+							$ids[$bindex] = "\x00";
+							$metas[$mindex] = $skylight[$mindex] = $blocklight[$mindex] = "\x00";
+						}
+					}else{
+						for($y = 0; $y < 16; ++$y, ++$bindex){
+							$mindex = $bindex >> 1;
+							
+							$id = $chunka[($y + ($x << 6) + ($z << 10))];
+							$m = $chunka[(($y >> 1) + 16 + ($x << 6) + ($z << 10))];
+							$sl = $chunka[(($y >> 1) + 32 + ($x << 6) + ($z << 10))];
+							$bl = $chunka[(($y >> 1) + 48 + ($x << 6) + ($z << 10))];
+							
+							$ids[$bindex] = $id;
+							$metas[$mindex] = $m;
+							$skylight[$mindex] = $sl;
+							$blocklight[$mindex] = $bl;
+						}
+					}
+					
+				}
 			}
 		}
 		
@@ -497,7 +533,6 @@ class PMFLevel extends PMF{
 	public function saveChunk($X, $Z){
 		$X = (int) $X;
 		$Z = (int) $Z;
-
 		if(!$this->isChunkLoaded($X, $Z)){
 			return false;
 		}
