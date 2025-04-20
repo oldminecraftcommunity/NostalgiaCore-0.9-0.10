@@ -177,7 +177,8 @@ function arguments($args){
 }
 
 function console($message, $EOL = true, $log = true, $level = 1){
-	if(!defined("DEBUG") or DEBUG >= $level){
+	
+	if((!defined("DEBUG") && $level == 1) || (defined("DEBUG") && DEBUG >= $level)){
 		$message .= $EOL === true ? PHP_EOL : "";
 		$time = (ENABLE_ANSI === true ? FORMAT_AQUA . date("H:i:s") . FORMAT_RESET : date("H:i:s")) . " ";
 		$replaced = TextFormat::clean(preg_replace('/\x1b\[[0-9;]*m/', "", $time . $message));

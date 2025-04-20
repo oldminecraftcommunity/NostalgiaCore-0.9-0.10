@@ -3,9 +3,9 @@
 class PocketChunkParser{
 
 	var $sectorLength = 4096;
-	var $chunkLength = 86016; //16 * 16 * 16
+	var $chunkLength = 86016; //16*16*128(ids) + 16*16*64(meta) + 16*16*64(skylight) + 16*16*64(blocklight)
 	var $map; //21 * $sectorLength
-	private $location, $raw = b"", $file;
+	public $location, $raw = "", $file;
 
 	function __construct(){
 		$map = [];
@@ -59,11 +59,11 @@ class PocketChunkParser{
 				$this->map[$x][$z] = $this->parseChunk($x, $z);
 			}
 		}
-		$this->raw = b"";
+		$this->raw = "";
 		console("[DEBUG] Chunks loaded!", true, true, 2);
 	}
 
-	private function loadLocationTable(){
+	public function loadLocationTable(){
 		$this->location = [];
 		console("[DEBUG] Loading Chunk Location table...", true, true, 2);
 		for($offset = 0; $offset < 0x1000; $offset += 4){

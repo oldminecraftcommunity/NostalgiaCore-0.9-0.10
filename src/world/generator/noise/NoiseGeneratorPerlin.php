@@ -37,13 +37,8 @@ class NoiseGeneratorPerlin extends NoiseGenerator{
 		$this->offsetY = $random->nextFloat() * 256;
 		$this->offsetZ = $random->nextFloat() * 256;
 		
-		for($i = 0; $i < 512; ++$i){
-			$this->perm[$i] = 0;
-		}
-		
-		for($i = 0; $i < 256; ++$i){
-			$this->perm[$i] = $random->nextInt(256);
-		}
+		for($i = 0; $i < 256; ++$i) $this->perm[$i] = $random->nextInt(256);
+		for($i = 256; $i < 512; ++$i) $this->perm[$i] = 0;
 		
 		for($i = 0; $i < 256; ++$i){
 			$pos = $random->nextInt(256-$i) + $i;

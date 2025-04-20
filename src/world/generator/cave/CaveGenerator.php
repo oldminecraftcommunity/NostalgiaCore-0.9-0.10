@@ -3,7 +3,7 @@
 class CaveGenerator extends StructureBase
 {
 	
-	public function recursiveGenerate(Level $level, $chunkXoffsetted, $chunkZoffsetted, $chunkX, $chunkZ){
+	public function recursiveGenerate(Level $level, &$blocks, $chunkXoffsetted, $chunkZoffsetted, $chunkX, $chunkZ){
 		$nextInt = $this->rand->nextInt($this->rand->nextInt($this->rand->nextInt(40) + 1) + 1);
 		if($this->rand->nextInt(15) != 0){
 			$nextInt = 0;
@@ -16,7 +16,7 @@ class CaveGenerator extends StructureBase
 			
 			$i2 = 1;
 			if($this->rand->nextInt(4) == 0){
-				$this->generateLargeCaveNode($level, $chunkX, $chunkZ, $randX, $randY, $randZ);
+				$this->generateLargeCaveNode($level, $blocks, $chunkX, $chunkZ, $randX, $randY, $randZ);
 				$i2 = 1 + $this->rand->nextInt(4);
 			}
 			
@@ -30,16 +30,16 @@ class CaveGenerator extends StructureBase
 				}
 				
 				
-				$this->generateCaveNode($level, $chunkX, $chunkZ, $randX, $randY, $randZ, $v19, $v17, $v18, 0, 0, 1);
+				$this->generateCaveNode($level, $blocks, $chunkX, $chunkZ, $randX, $randY, $randZ, $v19, $v17, $v18, 0, 0, 1);
 			}
 		}
 	}
 	
-	public function generateLargeCaveNode(Level $level, $xCenter, $zCenter, $x, $y, $z){
-		$this->generateCaveNode($level, $xCenter, $zCenter, $x, $y, $z, 1 + ($this->rand->nextFloat() * 6), 0, 0, -1, -1, 0.5);
+	public function generateLargeCaveNode(Level $level, &$blocks, $xCenter, $zCenter, $x, $y, $z){
+		$this->generateCaveNode($level, $blocks, $xCenter, $zCenter, $x, $y, $z, 1 + ($this->rand->nextFloat() * 6), 0, 0, -1, -1, 0.5);
 	}
 	
-	public function generateCaveNode(Level $level, $chunkX, $chunkZ, $x, $y, $z, $randFloat, $f1, $f2, $unk_1, $unk_2, $d3){
+	public function generateCaveNode(Level $level, &$blocks, $chunkX, $chunkZ, $x, $y, $z, $randFloat, $f1, $f2, $unk_1, $unk_2, $d3){
 		$worldX = $chunkX*16;
 		$worldZ = $chunkZ*16;
 		
@@ -79,8 +79,8 @@ class CaveGenerator extends StructureBase
 			$f += ($random->nextFloat() - $random->nextFloat()) * $random->nextFloat() * 2;
 			
 			if(!$z2 && $unk_1 == $var27 && $randFloat > 1 && $unk_2 > 0){
-				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 - M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
-				$this->generateCaveNode($level, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 + M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
+				$this->generateCaveNode($level, $blocks, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 - M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
+				$this->generateCaveNode($level, $blocks, $chunkX, $chunkZ, $x, $y, $z, $random->nextFloat() * 0.5 + 0.5, $f1 + M_PI_2, $f2 / 3, $unk_1, $unk_2, 1);
 				return;
 			}
 			
@@ -117,7 +117,8 @@ class CaveGenerator extends StructureBase
 						if($blockY >= 0 && $blockY < 128){
 							for($blockX = $minX; $blockX < $maxX; ++$blockX){
 								for($blockZ = $minZ; $blockZ < $maxZ; ++$blockZ){
-									$id = $level->level->getBlockID($blockX + $worldX, $blockY, $blockZ + $worldZ);
+									
+									$id = ord($blocks[($blockX << 11) | ($blockZ << 7) | $blockY]);
 									if($blockY != $minY - 1 && $blockX != $minX && $blockX != $maxX - 1 && $blockZ != $minZ && $blockZ != $maxZ - 1){
 										$blockY = $minY;
 									}
@@ -146,15 +147,16 @@ class CaveGenerator extends StructureBase
 							for($blockY = $maxY - 1; $blockY >= $minY; --$blockY){
 								$var51 = ($blockY + 0.5 - $y) / $verticalDiff;
 								if($var51 > -0.7 && $var51*$var51 + $var46 < 1){
-									$blockID = $level->level->getBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ);
+									//$blocks[($blockX << 11) | ($blockZ << 7) | $yPosition]
+									$blockID = ord($blocks[($blockX << 11) | ($blockZ << 7) | $yPosition]);
 									$hasGrass = $blockID == GRASS;
 									if($blockID == STONE || $blockID == DIRT || $hasGrass){
 										if($blockY < 10){
-											$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, LAVA);
+											$blocks[($blockX << 11) | ($blockZ << 7) | $yPosition] = chr(LAVA);
 										}else{
-											$level->level->setBlockID($blockX + $worldX, $yPosition, $blockZ + $worldZ, 0);
-											if($hasGrass && $level->level->getBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ) == DIRT){
-												$level->level->setBlockID($blockX + $worldX, $yPosition - 1, $blockZ + $worldZ, GRASS);
+											$blocks[($blockX << 11) | ($blockZ << 7) | $yPosition] = "\x00";
+											if($hasGrass && ord($blocks[($blockX << 11) | ($blockZ << 7) | ($yPosition-1)]) == DIRT){
+												$blocks[($blockX << 11) | ($blockZ << 7) | ($yPosition-1)] = chr(GRASS);
 											}
 										}
 									}

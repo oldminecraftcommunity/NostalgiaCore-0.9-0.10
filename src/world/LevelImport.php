@@ -9,14 +9,14 @@ class LevelImport{
 	}
 
 	public function import(){
-		if(file_exists($this->path . "tileEntities.dat")){ //OldPM
+		if(file_exists("{$this->path}/tileEntities.dat")){ //OldPM
 			$level = unserialize(file_get_contents($this->path . "level.dat"));
 			console("[INFO] Importing OldPM level \"" . $level["LevelName"] . "\" to PMF format");
 			$entities = new Config($this->path . "entities.yml", CONFIG_YAML, unserialize(file_get_contents($this->path . "entities.dat")));
 			$entities->save();
 			$tiles = new Config($this->path . "tiles.yml", CONFIG_YAML, unserialize(file_get_contents($this->path . "tileEntities.dat")));
 			$tiles->save();
-		}elseif(file_exists($this->path . "chunks.dat") and file_exists($this->path . "level.dat")){ //Pocket
+		}elseif(file_exists("{$this->path}/chunks.dat") && file_exists("{$this->path}/level.dat")){ //Pocket
 			$nbt = new NBT();
 			$nbt->load(substr(file_get_contents($this->path . "level.dat"), 8));
 			$level = array_shift($nbt->tree);
@@ -53,42 +53,23 @@ class LevelImport{
 			"generator" => get_class(LevelAPI::createGenerator(LevelAPI::$defaultLevelType))
 		]);
 		$chunks = new PocketChunkParser();
-		$chunks->loadFile($this->path . "chunks.dat");
-		$chunks->loadMap();
+		$chunks->loadFile("{$this->path}/chunks.dat");
+		$chunks->loadLocationTable();
+		
 		for($Z = 0; $Z < 16; ++$Z){
 			for($X = 0; $X < 16; ++$X){
-				$chunk = [
-					0 => "",
-					1 => "",
-					2 => "",
-					3 => "",
-					4 => "",
-					5 => "",
-					6 => "",
-					7 => ""
-				];
-				for($z = 0; $z < 16; ++$z){
-					for($x = 0; $x < 16; ++$x){
-						$block = $chunks->getChunkColumn($X, $Z, $x, $z, 0);
-						$meta = $chunks->getChunkColumn($X, $Z, $x, $z, 1);
-						for($Y = 0; $Y < 8; ++$Y){
-							$chunk[$Y] .= substr($block, $Y << 4, 16);
-							$metaf = str_split(substr($meta, $Y << 3, 8));
-							foreach($metaf as $m2){
-								$chunk[$Y] .= chr(ord($m2) << 4) . chr(ord($m2) & 0xf);
-							}
-							$chunk[$Y] .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-							$chunk[$Y] .= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-						}
-					}
-				}
-				foreach($chunk as $Y => $data){
-					$pmf->setMiniChunk($X, $Z, $Y, $data);
-				}
-				$pmf->saveChunk($X, $Z);
+				$chunkraw = $chunks->getChunk($X, $Z);
+				$ids = substr($chunkraw, 0, 16*16*128);
+				$meta = substr($chunkraw, 16*16*128, 16*16*64);
+				$sky = substr($chunkraw, 16*16*128+16*16*64, 16*16*64);
+				$block = substr($chunkraw, 16*16*128+16*16*64+16*16*64, 16*16*64);
+				$pmf->setChunkData($X, $Z, $ids, $meta, $block, $sky);
 			}
 			console("[NOTICE] Importing level " . ceil(($Z + 1) / 0.16) . "%");
 		}
+		
+		$pmf->doSaveRound();
+		$pmf->close();
 		$chunks->map = null;
 		$chunks = null;
 		if(file_exists($this->path . "level.dat")) @unlink($this->path . "level.dat");

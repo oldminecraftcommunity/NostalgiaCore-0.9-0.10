@@ -41,8 +41,6 @@ class PocketMinecraftServer{
 			Block::$class[JUNGLE_FENCE_GATE] = "JungleFenceGateBlock";
 			Block::$class[ACACIA_FENCE_GATE] = "AcaciaFenceGateBlock";
 			Block::$class[DARK_OAK_FENCE_GATE] = "DarkOakFenceGateBlock";
-			
-			
 		}
 
 		GrassColor::init();

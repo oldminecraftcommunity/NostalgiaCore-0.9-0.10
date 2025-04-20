@@ -181,7 +181,6 @@ class ServerAPI{
 		$this->server->send2Discord("[INFO] Starting Minecraft PE server version " . CURRENT_MINECRAFT_VERSION);
 		console("[INFO] This server is running NostalgiaCore version " . ($version->isDev() ? FORMAT_YELLOW : "") . MAJOR_VERSION . FORMAT_RESET . " \"" . CODENAME . "\" (MCPE: " . CURRENT_MINECRAFT_VERSION . ") (API " . CURRENT_API_VERSION . ") (PHP " . PHP_VERSION . ")", true, true, 0);
 		console("[INFO] NostalgiaCore is distributed under the LGPL License", true, true, 0);
-
 		$this->loadProperties();
 		$this->loadAPI("console", "ConsoleAPI");
 		$this->loadAPI("level", "LevelAPI");

@@ -112,7 +112,7 @@ class Level{
 	
 	public function checkSleep(){ //TODO events?
 		if(count($this->players) == 0) return false;
-		if($this->server->api->time->getPhase($this->level)  === "night"){ //TODO vanilla
+		if($this->server->api->time->getPhase($this->level) === "night"){ //TODO vanilla
 			foreach($this->players as $p){
 				if($p->isSleeping == false || $p->sleepingTime < 100){
 					return false;
@@ -129,7 +129,7 @@ class Level{
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		
-		if(!$this->level->isChunkLoaded($X, $Z) && $this->level->loadChunk($X, $Z, false) === false){
+		if(!$this->level->isChunkLoaded($X, $Z) && !$this->level->loadChunk($X, $Z, false)){
 			$this->level->createUnpopulatedChunk($X, $Z);
 		}
 		return $this->level->getBiomeId($x, $z);
@@ -167,29 +167,19 @@ class Level{
 		if($gen) $this->level->generateChunk($X, $Z, $this->generator);
 		
 		if(!$this->level->isChunkPopulated($X, $Z)) $this->level->unloadChunk($X, $Z);
-		if(!$this->level->isChunkLoaded($X, $Z)) $this->level->loadChunk($X, $Z, true);
-		
-		$miniChunks = [];
-			
-		for($y = 0; $y < 8; ++$y){
-			$miniChunks[$y] = $gen ? $this->level->getMiniChunk($X, $Z, $y) : str_repeat("\x00", 8192);
+		if(!$this->level->isChunkLoaded($X, $Z)) {
+			if(!$this->level->loadChunk($X, $Z, true)) return false;
 		}
 
 		$ci = $this->level->getIndex($X, $Z);
-		$orderedBiomeIds = $this->level->chunkInfo[$ci][0];
-		$orderedBiomeColors = $this->level->chunkInfo[$ci][1];
-
-		for ($i = 0; $i < 16; $i++){
-			for ($j = 0; $j < 16; $j++){
-				$bIndex = ($i << 6) + ($j << 10);
-				foreach($miniChunks as $chunk){
-					$orderedIds .= substr($chunk, $bIndex, 16);
-					$orderedData .= substr($chunk, $bIndex + 16, 8);
-					$orderedLight .= substr($chunk, $bIndex + 32, 8);
-					$orderedSkyLight .= substr($chunk, $bIndex + 48, 8);
-				}
-			}
-		}
+		$orderedBiomeIds = $this->level->biomeInfo[$ci];
+		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
+		
+		$orderedIds = $this->level->blockIds[$ci]; 
+		$orderedData = $this->level->blockMetas[$ci];
+		$orderedLight = $this->level->blockLight[$ci];
+		$orderedSkyLight = $this->level->skyLight[$ci];
+		
 		$chunkTiles = [];
 		$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '".$this->getName()."' AND x >= ".($X * 16 - 1)." AND x < ".($X * 16 + 17)." AND z >= ".($Z * 16 - 1)." AND z < ".($Z * 16 + 17).";");
 		if($tiles !== false and $tiles !== true){
@@ -479,8 +469,8 @@ class Level{
 			}
 		}
 		
-		foreach($this->level->fakeLoaded as $ind => $val){
-			$xz = explode(".", $val);
+		foreach($this->level->fakeLoaded as $ind => $_){
+			$xz = explode(".", $ind);
 			$this->level->unloadChunk($xz[0], $xz[1]);
 			unset($this->level->fakeLoaded[$ind]);
 		}
@@ -518,11 +508,11 @@ class Level{
 		$pos->x = (int)$pos->x;
 		$pos->y = (int)$pos->y;
 		$pos->z = (int)$pos->z;
-		if(!isset($this->level) or (($pos instanceof Position) and $pos->level !== $this) or $pos->y < 0){
+		if(!isset($this->level) || (($pos instanceof Position) && $pos->level !== $this) || $pos->y < 0){
 			return false;
 		}
 		$ret = $this->level->setBlock($pos->x, $pos->y, $pos->z, $block->getID(), $block->getMetadata());
-		if($ret === true){ 
+		if($ret){
 			if(!($pos instanceof Position)){
 				$pos = new Position($pos->x, $pos->y, $pos->z, $this);
 			}
@@ -553,21 +543,6 @@ class Level{
 		return $ret;
 	}
 
-	public function getMiniChunk($X, $Z, $Y){
-		if(!isset($this->level)){
-			return false;
-		}
-		return $this->level->getMiniChunk($X, $Z, $Y);
-	}
-
-	public function setMiniChunk($X, $Z, $Y, $data){
-		if(!isset($this->level)){
-			return false;
-		}
-		$this->changedCount["$X:$Y:$Z"] = 4096;
-		return $this->level->setMiniChunk($X, $Z, $Y, $data);
-	}
-
 	public function loadChunk($X, $Z){
 		if(!isset($this->level)){
 			return false;
@@ -585,20 +560,6 @@ class Level{
 		}
 		
 		return $this->level->unloadChunk($X, $Z, $this->server->saveEnabled);
-	}
-
-
-	public function getOrderedMiniChunk($X, $Z, $Y){
-		if(!isset($this->level)){
-			return false;
-		}
-		$raw = $this->level->getMiniChunk($X, $Z, $Y);
-		$ordered = "";
-		$flag = chr(1 << $Y);
-		for($j = 0; $j < 256; ++$j){
-			$ordered .= $flag . substr($raw, $j << 5, 24); //16 + 8
-		}
-		return $ordered;
 	}
 
 	public function getSafeSpawn($spawn = false){
@@ -688,25 +649,6 @@ class Level{
 	}
 
 	public function checkTime(){
-		/*if(!isset($this->level)){
-			return false;
-		}
-		$now = microtime(true);
-		if($this->stopTime == true){
-			$time = $this->startTime;
-		}else{
-			$time = $this->startTime + ($now - $this->startCheck) * 20;
-		}
-		if($this->server->api->dhandle("time.change", ["level" => $this, "time" => $time]) !== false){ //send time to player every 5 ticks
-			$this->time = $time;
-			$pk = new SetTimePacket;
-			$pk->time = (int) $this->time;
-			console($pk->time);
-			$pk->started = $this->stopTime == false;
-			$this->server->api->player->broadcastPacket($this->players, $pk);
-		}else{
-			$this->time -= 20 * 13;
-		}*/
 		$pk = new SetTimePacket;
 		$pk->time = (int) $this->time;
 		$pk->started = $this->stopTime == false;
@@ -748,5 +690,25 @@ class Level{
 			return false;
 		}
 		return $this->server->api->block->scheduleBlockUpdate($pos, $delay, $type);
+	}
+	
+	
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function getMiniChunk($X, $Z, $Y){
+		return false;
+	}
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function getOrderedMiniChunk($X, $Z, $Y){
+		return false;
+	}
+	/**
+	 * @deprecated minichunks were removed
+	 */
+	public function setMiniChunk($X, $Z, $Y, $data){
+		return false;
 	}
 }

@@ -30,6 +30,11 @@ abstract class Biome{
 	public function setTempDown($temp, $down){
 		$this->temperature = $temp;
 		$this->downfall = $down;
+		if($this->temperature > 1) $this->temperature = 1;
+		if($this->temperature < 0) $this->temperature = 0;
+		if($this->downfall > 1) $this->downfall = 1;
+		if($this->downfall < 0) $this->downfall = 0;
+		
 	}
 	
 	public function setMinMax($min, $max){
@@ -56,10 +61,7 @@ abstract class Biome{
 	public function getGrassColor($x, $z){
 		$temp = $this->temperature;
 		$down = $this->downfall;
-		if($temp > 1) $temp = 1;
-		if($temp < 0) $temp = 0;
-		if($down > 1) $down = 1;
-		if($down < 0) $down = 0;
+		
 		return GrassColor::getGrassColor($temp, $down);
 	}
 	

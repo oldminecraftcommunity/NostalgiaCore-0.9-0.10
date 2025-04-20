@@ -77,9 +77,7 @@ abstract class NoiseGenerator{
 			$freq *= $frequency;
 			$amp *= $amplitude;
 		}
-		if($normalized === true){
-			$result /= $max;
-		}
+		if($normalized) $result /= $max;
 		
 		return $result;
 	}
@@ -88,5 +86,73 @@ abstract class NoiseGenerator{
 		$this->offsetX = $x;
 		$this->offsetY = $y;
 		$this->offsetZ = $z;
+	}
+	
+	public function getFastNoise3D($xSize, $ySize, $zSize, $xSamplingRate, $ySamplingRate, $zSamplingRate, $x, $y, $z){
+		$noiseArray = array_fill(0, $xSize, array_fill(0, $zSize, []));
+		
+		for($xx = 0; $xx <= $xSize; $xx += $xSamplingRate){
+			for($zz = 0; $zz <= $zSize; $zz += $zSamplingRate){
+				for($yy = 0; $yy <= $ySize; $yy += $ySamplingRate){
+					$noiseArray[$xx][$zz][$yy] = $this->noise3D(($x + $xx) / 32, ($y + $yy) / 32, ($z + $zz) / 32, 2, 0.25, true);
+				}
+			}
+		}
+		
+		for($xx = 0; $xx < $xSize; ++$xx){
+			$leftX = $xx % $xSamplingRate;
+			if($leftX == 0){
+				$nnx = $xx + $xSamplingRate;
+				$noiseNX = &$noiseArray[$xx];
+				$noiseNNX = &$noiseArray[$nnx];
+				$dx1 = 1;
+				$dx2 = 0;
+			}else{
+				$dx1 = (($nnx - $xx) / $xSamplingRate);
+				$dx2 = ($leftX / $xSamplingRate);
+			}
+			$noiseXX = &$noiseArray[$xx];
+			
+			for($zz = 0; $zz < $zSize; ++$zz){
+				$leftZ = $zz % $zSamplingRate;
+				if($leftZ == 0){
+					$nnz = $zz + $zSamplingRate;
+					$noiseNXNZ = &$noiseNX[$zz];
+					$noiseNXNNZ = &$noiseNX[$nnz];
+					$noiseNNXNZ = &$noiseNNX[$zz];
+					$noiseNNXNNZ = &$noiseNNX[$nnz];
+					$dz1 = 1;
+					$dz2 = 0;
+				}else{
+					$dz1 = ($nnz - $zz) / $zSamplingRate;
+					$dz2 = $leftZ / $zSamplingRate;
+				}
+				
+				$dz1dx1 = $dz1*$dx1;
+				$dz1dx2 = $dz1*$dx2;
+				$dz2dx1 = $dz2*$dx1;
+				$dz2dx2 = $dz2*$dx2;
+				$noiseXXZZ = &$noiseXX[$zz];
+				
+				for($yy = 0; $yy < $ySize; ++$yy){
+					$leftY = $yy % $ySamplingRate;
+					if($leftY == 0){
+						$nny = $yy + $ySamplingRate;
+						$a = $dz1dx1 * $noiseNXNZ[$yy] + $dz1dx2 * $noiseNNXNZ[$yy];
+						$b = $dz1dx1 * $noiseNXNZ[$nny] + $dz1dx2 * $noiseNNXNZ[$nny];
+						$c = $dz2dx1 * $noiseNXNNZ[$yy] + $dz2dx2 * $noiseNNXNNZ[$yy];
+						$d = $dz2dx1 * $noiseNXNNZ[$nny] + $dz2dx2 * $noiseNNXNNZ[$nny];
+					}
+					
+					if($leftX != 0 || $leftZ != 0 || $leftY != 0){
+						$dy1 = (($nny - $yy) / $ySamplingRate);
+						$dy2 = ($leftY / $ySamplingRate);
+						
+						$noiseXXZZ[$yy] = ($dy1 * $a + $dy2 * $b) + ($dy1 * $c + $dy2 * $d);
+					}
+				}
+			}
+		}
+		return $noiseArray;
 	}
 }
