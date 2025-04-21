@@ -21,6 +21,9 @@ class Level{
 	public $tiles, $blockUpdates, $nextSave, $players = [], $level, $mobSpawner;
 	public $time, $startCheck, $startTime, $server, $name, $usedChunks, $changedBlocks, $changedCount, $stopTime;
 	public $resendBlocksToPlayers = [];
+	
+	public $skyDarken = 0;
+	
 	public $generator;
 	public function __construct(PMFLevel $level, Config $entities, Config $tiles, Config $blockUpdates, $name){
 		$this->server = ServerAPI::request();
@@ -427,9 +430,85 @@ class Level{
 		return $ret;
 	}
 	
+	public function getTimeOfDay($f){
+		$time = $this->getTime();
+		$v4 = (($time % 19200) + $f) * 0.000052083 - 0.25;
+		if($v4 < 0) $v4 += 1;
+		if($v4 > 1) $v4 -= 1;
+		return $v4 + (((1.0 - ((cos($v4 * 3.1416) * 0.5) + 0.5)) - $v4) * 0.33333);
+	}
+	
+	public function getSkyDarken($f){
+		$v3 = cos((M_PI + M_PI) * $this->getTimeOfDay($f));
+		$v4 = 0.8 - ($v3+$v3);
+		if($v4 < 0) $v4 = 0;
+		if($v4 > 1) $v4 = 1;
+		return ((1 - $v4) * -11) + 11;
+	}
+	
+	public function updateSkyBrightness(){
+		$this->skyDarken = $this->getSkyDarken(1);
+	}
+	
+	public function isSkyLit($x, $y, $z){
+		if($y < 0) return false;
+		if($y > 127) return true;
+		
+		return $this->level->isSkyLit($x, $y, $z);
+	}
+	
+	public function updateLightIfOtherThan($layer, $x, $y, $z, $level){
+		if($layer == LIGHTLAYER_SKY){
+			if($this->isSkyLit($x, $y, $z)) $level = 15;
+		}else if($layer == LIGHTLAYER_BLOCK){
+			$blockID = $this->level->getBlockID($x, $y, $z);
+			$emission = StaticBlock::$lightEmission[$blockID];
+			if($emission > $level) $level = $emission;
+		}
+		
+		if($this->level->getBrightness($layer, $x, $y, $z) != $level){
+			console("updating $x $y $z: {$this->level->getBrightness($layer, $x, $y, $z)} != {$level}");
+			$this->updateLight($layer, $x, $y, $z, $x, $y, $z);
+		}
+	}
+	
+	public $lightUpdatesCount;
+	public $lightUpdates = [];
+	public function updateLight($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $resize=true){
+		if($this->lightDepth > 49) return false;
+		++$this->lightUpdatesCount;
+		if($this->lightUpdatesCount == 50){ //TODO 0.9.5 has 60?
+			--$this->lightUpdatesCount;
+			return;
+		}
+		
+		$avgX = ($minX + $maxX) / 2;
+		$avgZ = ($minZ + $maxZ) / 2;
+		
+		if($this->level->isChunkLoaded($avgX >> 4, $avgZ >> 4)){
+			console("adding");
+			//TODO check is empty
+			
+			if($resize){
+				//TODO resize light updates if possible
+			}
+			
+			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
+			$this->lightUpdates[] = $update;
+			
+			if(count($this->lightUpdates) > 1000000){
+				//TODO clear light updates
+			}
+		}
+		--$this->lightUpdatesCount;
+	}
+	
 	public function onTick(PocketMinecraftServer $server){
 		//$ents = $server->api->entity->getAll($this);
+		$this->updateSkyBrightness();
+		
 		if(!$this->stopTime) $this->time+=2;
+		
 		foreach($this->entityList as $k => $e){
 			if(!($e instanceof Entity)){
 				unset($this->entityList[$k]);
@@ -502,6 +581,30 @@ class Level{
 			}
 			unset($this->resendBlocksToPlayers[$playerCID]);
 		}
+		
+		while($this->updateLights());
+	}
+	
+	public $lightDepth = 0;
+	public function updateLights(){
+		if($this->lightDepth > 49) return false;
+		++$this->lightDepth;
+		
+		$maxUpdates = 500;
+		console(count($this->lightUpdates));
+		
+		foreach($this->lightUpdates as $index => $upd){
+			if(--$maxUpdates <= 0){
+				--$this->lightDepth;
+				return true; //true;
+			}
+			
+			unset($this->lightUpdates[$index]);
+			$upd->update($this);
+		}
+		
+		--$this->lightDepth;
+		return false;
 	}
 	
 	public function setBlock(Vector3 $pos, Block $block, $update = true, $tiles = false, $direct = false){

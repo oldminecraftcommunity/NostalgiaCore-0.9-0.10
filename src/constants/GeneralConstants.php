@@ -31,3 +31,9 @@ define("SIDE_ZNEG", 2);
 define("SIDE_ZPOS", 3);
 define("SIDE_XNEG", 4);
 define("SIDE_XPOS", 5);
+
+//Light Layers - contain default values for light. Must be different to work correctly
+const LIGHTLAYER_SKY = 15;
+const LIGHTLAYER_BLOCK = 0;
+
+

@@ -470,6 +470,71 @@ class PMFLevel extends PMF{
 		$aZ = $z & 15;
 		$this->biomeInfo[$index][$aX + ($aZ << 4)] = chr($id);
 	}
+	
+	public function isSkyLit($x, $y, $z){
+		//TODO need heightmap
+		return false;
+	}
+	
+	public function getBrightness($layer, $x, $y, $z){
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		
+		if($y > 127 || $y < 0) return $layer;
+		
+		$X = $x >> 4;
+		$Z = $z >> 4;
+		$index = $this->getIndex($X, $Z);
+		if(!isset($this->blockMetas[$index])) return 0;
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		if($layer == LIGHTLAYER_BLOCK) $m = ord($this->blockLight[$index][$bindex >> 1]);
+		else $m = ord($this->skyLight[$index][$bindex >> 1]);
+		
+		return ($bindex & 1) ? ($m >> 4) : ($m & 0xf);
+	}
+	
+	public function setBrightness($layer, $x, $y, $z, $value){
+		$x = (int) $x;
+		$y = (int) $y;
+		$z = (int) $z;
+		$value &= 0x0F;
+		if($y > 127 || $y < 0) return false;
+		
+		$X = $x >> 4;
+		$Z = $z >> 4;
+		$index = $this->getIndex($X, $Z);
+		if(!isset($this->blockMetas[$index])) return 0;
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		
+		if($layer == LIGHTLAYER_BLOCK) $old_m = ord($this->blockLight[$index][$bindex >> 1]);
+		else $old_m = ord($this->skyLight[$index][$bindex >> 1]);
+		$new_m = 0;
+		
+		if($bindex & 1){
+			$new_m = ($old_m & 0xf) | ($value << 4);
+			$old_m >>= 4;
+		}else {
+			$new_m = ($old_m << 4) | ($value);
+			$old_m &= 0xf;
+		}
+		
+		if($old_m != $new_m){
+			if($layer == LIGHTLAYER_BLOCK) $this->blockLight[$index][$bindex >> 1] = chr($new_m);
+			else $this->skyLight[$index][$bindex >> 1] = chr($new_m);
+			
+			$this->chunkChange[$index] = true;
+			return true;
+		}
+		return false;
+	}
+	
 	public function forceUnloadChunk($X, $Z, $save = true){
 		$X = (int) $X;
 		$Z = (int) $Z;
@@ -859,6 +924,13 @@ class PMFLevel extends PMF{
 		
 		if($old_b != $block || $old_m != $meta){
 			$this->blockIds[$index][$bindex] = chr($block);
+			//TODO also do same thing in setBlockID
+			//TODO heightmap
+			
+			$this->level->updateLight(LIGHTLAYER_SKY, $x, $y, $z, $x, $y, $z);
+			$this->level->updateLight(LIGHTLAYER_BLOCK, $x, $y, $z, $x, $y, $z);
+			//TODO also light gaps
+			
 			$this->blockMetas[$index][$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;
 			return true;
