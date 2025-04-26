@@ -104,6 +104,7 @@ class SuperflatGenerator implements LevelGenerator{
 	public function generateChunk($chunkX, $chunkZ){
 		$this->level->level->setChunkData($chunkX, $chunkZ, $this->chunk[0], $this->chunk[1]);
 		$this->level->level->setBiomeIdArrayForChunk($chunkX, $chunkZ, str_repeat(chr(BIOME_PLAINS), 256));
+		$this->level->level->recalcHeightmap($chunkX, $chunkZ);
 	}
 
 	public function populateChunk($chunkX, $chunkZ){

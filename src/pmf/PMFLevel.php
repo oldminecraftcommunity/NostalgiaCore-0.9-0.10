@@ -1,6 +1,6 @@
 <?php
 
-define("PMF_CURRENT_LEVEL_VERSION", 0x04);
+define("PMF_CURRENT_LEVEL_VERSION", 0x05);
 
 class PMFLevel extends PMF{
 
@@ -14,10 +14,12 @@ class PMFLevel extends PMF{
 	
 	private $chunkChange = [];
 	
+	public $maxChunkHeight = [];
 	public $blockIds = [];
 	public $blockMetas = [];
 	public $blockLight = [];
 	public $skyLight = [];
+	public $heightmap = [];
 	
 	public $biomeColorInfo = [];
 	public $biomeInfo = [];
@@ -472,8 +474,145 @@ class PMFLevel extends PMF{
 	}
 	
 	public function isSkyLit($x, $y, $z){
-		//TODO need heightmap
-		return false;
+		if($y < 0) return false;
+		if($y > 127) return true;
+		$index = PMFLevel::getIndex($x >> 4, $z >> 4);
+		
+		return ord($this->heightmap[$index][(($z&0xf) << 4) | ($x&0xf)]) <= $y;
+	}
+	
+	public function recalcHeight($x, $y, $z){
+		$X = $x >> 4;
+		$Z = $z >> 4;
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		$index = PMFLevel::getIndex($X, $Z);
+		$heightmap = &$this->heightmap[$index];
+		$height = ord($heightmap[($cz << 4) | $cx]);
+		$oldHeight = $height;
+		if($y > $height) $height = $y;
+		
+		while($height > 0 && StaticBlock::$lightBlock[$this->getBlockID($x, $height-1, $z)] == 0){
+			--$height;
+		}
+		
+		if($height != $oldHeight){
+			//world.lightColumnChanged - empty
+			$heightmap[($cz << 4) | $cx] = chr($height);
+			
+			if($this->maxChunkHeight[$index] <= $height){
+				$tby = 127;
+				
+				for($xx = 0; $xx < 16; ++$xx){
+					for($zz = 0; $zz < 16; ++$zz){
+						$m = ord($heightmap[($zz << 4) | $xx]);
+						if($m < $tby) $tby = $m;
+					}
+				}
+				
+				$this->maxChunkHeight[$index] = $tby;
+			}else{
+				$this->maxChunkHeight[$index] = $height;
+			}
+			
+			if($height >= $oldHeight){
+				$this->level->updateLight(LIGHTLAYER_SKY, $x, $oldHeight, $z, $x, $height, $z);
+				for($k = $oldHeight; $k < $height; ++$k){
+					$this->setBrightness(LIGHTLAYER_SKY, $x, $k, $z, 0);
+				}
+			}else{
+				for($k = $oldHeight; $k < $height; ++$k){
+					$this->setBrightness(LIGHTLAYER_SKY, $x, $k, $z, 15);
+				}
+			}
+			
+			$lightLevel = 15;
+			$savedHeight = $height;
+			while($height > 0 && $lightLevel > 0){
+				$lb = StaticBlock::$lightBlock[$this->getBlockID($x, --$height, $z)];
+				
+				if($lb == 0) $lb = 1;
+				$lightLevel -= $lb;
+				if($lightLevel < 0) $lightLevel = 0;
+				$this->setBrightness(LIGHTLAYER_SKY, $x, $height, $z, $lightLevel);
+			}
+			
+			while($height > 0 && StaticBlock::$lightBlock[$this->getBlockID($x, $height-1, $z)] == 0){
+				--$height;
+			}
+			
+			if($height != $savedHeight) $this->level->updateLight(LIGHTLAYER_SKY, $x-1, $height, $z-1, $x+1, $savedHeight, $z+1);
+		}
+		
+		
+	}
+	
+	public function getHeightmapValue($x, $z){
+		$x = (int) $x;
+		$z = (int) $z;
+		$X = $x >> 4;
+		$Z = $z >> 4;
+		$index = $this->getIndex($X, $Z);
+		if(!isset($this->heightmap[$index])) return 0;
+		
+		$cx = $x & 0xf;
+		$cz = $z & 0xf;
+		return ord($this->heightmap[$index][($cz << 4) | $cx]);
+	}
+	
+	public function lightGaps($X, $Z, $x, $z){
+		$index = PMFLevel::getIndex($X, $Z);
+		$height = ord($this->heightmap[$index][($z << 4) | $x]);
+		$wx = $X*16 + $x;
+		$wz = $Z*16 + $z;
+		
+		$this->lightGap($wx-1, $wz, $height);
+		$this->lightGap($wx+1, $wz, $height);
+		$this->lightGap($wx, $wz-1, $height);
+		$this->lightGap($wx, $wz+1, $height);
+	}
+	
+	public function lightGap($x, $z, $height){
+		$hhere = $this->getHeightmapValue($x, $z);
+		if($hhere < $height){
+			$this->level->updateLight(LIGHTLAYER_SKY, $x, $hhere, $z, $x, $height, $z);
+		}else if($hhere != $height){
+			$this->level->updateLight(LIGHTLAYER_SKY, $x, $height, $z, $x, $hhere, $z);
+		}
+	}
+	
+	public function recalcHeightmap($X, $Z){
+		$index = PMFLevel::getIndex($X, $Z);
+		$blocks = &$this->blockIds[$index];
+		$heightmap = $this->heightmap[$index];
+		$topblock = 127;
+		for($x = 0; $x < 16; ++$x){
+			for($z = 0; $z < 16; ++$z){
+				$y = 127;
+				$xzIndex =  ($x << 11) | ($z << 7);
+				$hmIndex = ($z << 4) | $x;
+				while($y > 0 && StaticBlock::$lightBlock[ord($blocks[$xzIndex|$y])] == 0){
+					--$y;
+				}
+				
+				$heightmap[$hmIndex] = chr($y);
+				if($y < $topblock) $topblock = $y;
+				
+				$lightLevel = 15;
+				$yLight = 127;
+				do{
+					$lightLevel -= StaticBlock::$lightBlock[ord($blocks[$xzIndex|$yLight])];
+					if($lightLevel > 0) $this->setBrightness(LIGHTLAYER_SKY, $x, $yLight, $z, $lightLevel);
+				}while(--$yLight > 0 && $lightLevel > 0);
+			}
+		}
+		
+		$this->maxChunkHeight[$index] = $topblock;
+		for($x = 0; $x < 16; ++$x){
+			for($z = 0; $z < 16; ++$z){
+				$this->lightGaps($X, $Z, $x, $z);
+			}
+		}
 	}
 	
 	public function getBrightness($layer, $x, $y, $z){
@@ -539,7 +678,7 @@ class PMFLevel extends PMF{
 		$X = (int) $X;
 		$Z = (int) $Z;
 		$index = $this->getIndex($X, $Z);
-		unset($this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
+		unset($this->maxChunkHeight[$index], $this->heightmap[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 	}
 	public function unloadChunk($X, $Z, $save = true){
 		$X = (int) $X;
@@ -550,7 +689,7 @@ class PMFLevel extends PMF{
 		if($save) $this->saveChunk($X, $Z);
 		
 		$index = $this->getIndex($X, $Z);
-		unset($this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
+		unset($this->maxChunkHeight[$index], $this->heightmap[$index], $this->blockIds[$index], $this->blockMetas[$index], $this->blockLight[$index], $this->skyLight[$index], $this->chunkChange[$index]);
 		return true;
 	}
 
@@ -605,7 +744,8 @@ class PMFLevel extends PMF{
 		gzwrite($chunk, $this->blockMetas[$index]);
 		gzwrite($chunk, $this->blockLight[$index]);
 		gzwrite($chunk, $this->skyLight[$index]);
-		
+		gzwrite($chunk, $this->heightmap[$index]);
+		gzwrite($chunk, chr($this->maxChunkHeight[$index]));
 		$this->chunkChange[$index] = false;
 		return true;
 	}
@@ -656,7 +796,10 @@ class PMFLevel extends PMF{
 		$offset += 16*16*64;
 		$this->skyLight[$index] = substr($chunk, $offset, 16*16*64);
 		$offset += 16*16*64;
-		
+		$this->heightmap[$index] = substr($chunk, $offset, 16*16);
+		$offset += 16*16;
+		$this->maxChunkHeight[$index] = ord(substr($chunk, $offset, 1));
+		$offset += 1;
 
 		$this->setPopulated($X, $Z, $populated);
 		if($populate && !$populated){
@@ -738,6 +881,8 @@ class PMFLevel extends PMF{
 			$this->blockMetas[$index] = str_repeat("\x00", 16*16*64);
 			$this->blockLight[$index] = str_repeat("\x00", 16*16*64);
 			$this->skyLight[$index] = str_repeat("\x00", 16*16*64);
+			$this->heightmap[$index] = str_repeat("\x00", 16*16);
+			$this->maxChunkHeight[$index] = 0;
 			
 			$this->chunkChange[$index] = true;
 			$this->biomeInfo[$index] = str_repeat("\x00", 256);
@@ -925,11 +1070,16 @@ class PMFLevel extends PMF{
 		if($old_b != $block || $old_m != $meta){
 			$this->blockIds[$index][$bindex] = chr($block);
 			//TODO also do same thing in setBlockID
-			//TODO heightmap
 			
+			$height = ord($this->heightmap[$index][($cz << 4) | $cx]);
+			if(StaticBlock::$lightBlock[$block] != 0){
+				if($y >= $height) $this->recalcHeight($x, $y+1, $z);
+			}else{
+				$this->recalcHeight($x, $y, $z);
+			}
 			$this->level->updateLight(LIGHTLAYER_SKY, $x, $y, $z, $x, $y, $z);
 			$this->level->updateLight(LIGHTLAYER_BLOCK, $x, $y, $z, $x, $y, $z);
-			//TODO also light gaps
+			$this->lightGaps($X, $Z, $cx, $cz);
 			
 			$this->blockMetas[$index][$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;

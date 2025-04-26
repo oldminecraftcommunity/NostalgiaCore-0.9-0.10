@@ -450,16 +450,9 @@ class Level{
 		$this->skyDarken = $this->getSkyDarken(1);
 	}
 	
-	public function isSkyLit($x, $y, $z){
-		if($y < 0) return false;
-		if($y > 127) return true;
-		
-		return $this->level->isSkyLit($x, $y, $z);
-	}
-	
 	public function updateLightIfOtherThan($layer, $x, $y, $z, $level){
 		if($layer == LIGHTLAYER_SKY){
-			if($this->isSkyLit($x, $y, $z)) $level = 15;
+			if($this->level->isSkyLit($x, $y, $z)) $level = 15;
 		}else if($layer == LIGHTLAYER_BLOCK){
 			$blockID = $this->level->getBlockID($x, $y, $z);
 			$emission = StaticBlock::$lightEmission[$blockID];
@@ -467,7 +460,7 @@ class Level{
 		}
 		
 		if($this->level->getBrightness($layer, $x, $y, $z) != $level){
-			console("updating $x $y $z: {$this->level->getBrightness($layer, $x, $y, $z)} != {$level}");
+			//console("updating $x $y $z: {$this->level->getBrightness($layer, $x, $y, $z)} != {$level}");
 			$this->updateLight($layer, $x, $y, $z, $x, $y, $z);
 		}
 	}
@@ -486,18 +479,35 @@ class Level{
 		$avgZ = ($minZ + $maxZ) / 2;
 		
 		if($this->level->isChunkLoaded($avgX >> 4, $avgZ >> 4)){
-			console("adding");
+			$ind = "$layer $minX $minY $minZ $maxX $maxY $maxZ";
+			if(isset($this->lightUpdates[$ind])) {
+				--$this->lightUpdatesCount;
+				return;
+			}
+			
+			
+			//console("adding");
 			//TODO check is empty
 			
+			
+			/*foreach($this->lightUpdates as $update){
+				if($update->layer == $layer && $update->contains($minX, $minY, $minZ, $maxX, $maxY, $maxZ)){
+					--$this->lightUpdatesCount;
+					return;
+				}
+			}*/
+				
 			if($resize){
 				//TODO resize light updates if possible
 			}
 			
-			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
-			$this->lightUpdates[] = $update;
 			
-			if(count($this->lightUpdates) > 1000000){
-				//TODO clear light updates
+			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
+			$this->lightUpdates[$ind] = $update;
+			
+			if(count($this->lightUpdates) > 100000){
+				ConsoleAPI::warn("Too many light updates, clearing.");
+				$this->lightUpdates = [];
 			}
 		}
 		--$this->lightUpdatesCount;
@@ -582,6 +592,7 @@ class Level{
 			unset($this->resendBlocksToPlayers[$playerCID]);
 		}
 		
+		console(count($this->lightUpdates));
 		while($this->updateLights());
 	}
 	
@@ -591,8 +602,8 @@ class Level{
 		++$this->lightDepth;
 		
 		$maxUpdates = 500;
-		console(count($this->lightUpdates));
-		
+		//console(count($this->lightUpdates));
+		restart:
 		foreach($this->lightUpdates as $index => $upd){
 			if(--$maxUpdates <= 0){
 				--$this->lightDepth;
@@ -602,6 +613,7 @@ class Level{
 			unset($this->lightUpdates[$index]);
 			$upd->update($this);
 		}
+		if(count($this->lightUpdates) > 0) goto restart;
 		
 		--$this->lightDepth;
 		return false;
