@@ -1,6 +1,6 @@
 <?php
 
-class LightUpdate
+class LightUpdate extends LightUpdateBase
 {
 	public $layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ;
 	public function __construct($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ){
@@ -17,7 +17,38 @@ class LightUpdate
 	}
 	
 	public function contains($minX, $minY, $minZ, $maxX, $maxY, $maxZ){
-		return $this->minX <= $minX && $this->maxX >= $maxX && $this->minY <= $minY && $this->maxY >= $maxY && $this->minZ <= $minZ && $this->maxZ >= $maxZ;
+		return $this->minX <= $minX && $this->minY <= $minY && $this->minZ <= $minZ && $this->maxX >= $maxX && $this->maxY >= $maxY && $this->maxZ >= $maxZ;
+	}
+	
+	const ALREADY_CONTAINED = 2;
+	const SUCCESS = 1;
+	const NOT_POSSIBLE = 0;
+	public function expand($minX, $minY, $minZ, $maxX, $maxY, $maxZ){
+		if($this->minX <= $minX && $this->minY <= $minY && $this->minZ <= $minZ && $this->maxX >= $maxX && $this->maxY >= $maxY && $this->maxZ >= $maxZ){
+			return self::ALREADY_CONTAINED;
+		}
+		
+		if($this->minX-1 > $minX || $this->minY-1 > $minY || $this->minZ-1 > $minZ || $this->maxX+1 < $maxX || $this->maxY+1 < $maxY || $this->maxZ+1 < $maxZ){
+			return self::NOT_POSSIBLE;
+		}
+		
+		if($this->minX < $minX) $minX = $this->minX;
+		if($this->minY < $minY) $minY = $this->minY;
+		if($this->minZ < $minZ) $minZ = $this->minZ;
+		if($this->maxX < $maxX) $maxX = $this->maxX;
+		if($this->maxY < $maxY) $maxY = $this->maxY;
+		if($this->maxZ < $maxZ) $maxZ = $this->maxZ;
+		
+		if(($maxZ-$minZ)*($maxY-$minY)*($maxX-$minX) - ($this->maxX-$this->minX)*($this->maxZ-$this->minZ)*($this->maxY-$this->minY) > 2){
+			return self::NOT_POSSIBLE;
+		}
+		$this->minX = $minX;
+		$this->minY = $minY;
+		$this->minZ = $minZ;
+		$this->maxX = $maxX;
+		$this->maxY = $maxY;
+		$this->maxZ = $maxZ;
+		return self::SUCCESS;
 	}
 	
 	public function update(Level $level){
@@ -29,8 +60,12 @@ class LightUpdate
 		
 		for($x = $this->minX; $x <= $this->maxX; ++$x){
 			$xb = $x & 0xf;
+			$xbm1 = ($x-1)&0xf;
+			$xbp1 = ($x+1)&0xf;
+			
 			for($z = $this->minZ; $z <= $this->maxZ; ++$z){
-				
+				$zbm1 = ($z-1)&0xf;
+				$zbp1 = ($z+1)&0xf;
 				$zb = $z & 0xf;
 				$index = PMFLevel::getIndex($x >> 4, $z >> 4);
 				if(!isset($level->level->blockIds[$index])) continue;
@@ -54,7 +89,6 @@ class LightUpdate
 					$upper = $y & 1;
 					
 					$id = ord($ids[$bindex]);
-					//$brightness = $level->level->getBrightness($this->layer, $x, $y, $z);
 					$braw = ord($lights[$mindex]);
 					if($upper){
 						$brightness = $braw >> 4;
@@ -74,10 +108,7 @@ class LightUpdate
 					}
 					
 					if($lightBlock <= 14 || $lightEmission != 0){
-						$xbm1 = ($x-1)&0xf;
-						$xbp1 = ($x+1)&0xf;
-						$zbm1 = ($z-1)&0xf;
-						$zbp1 = ($z+1)&0xf;
+						
 						
 						$xNeg = ord($xneglight[(($xbm1 << 11) | ($zb << 7) | $y) >> 1]);
 						$xNeg = $upper ? $xNeg >> 4 : $xNeg & 0xf;
@@ -90,17 +121,11 @@ class LightUpdate
 						
 						if($upper){
 							$yNeg = $brightness_low;
-							$yPos = $bindex+1 > 127 ? $this->layer : (ord($lights[($bindex+1) >> 1]) & 0xf);
+							$yPos = $y+1 > 127 ? $this->layer : (ord($lights[($bindex+1) >> 1]) & 0xf);
 						}else{
-							$yNeg = ord($lights[($bindex-1) >> 1]) >> 4;
-							$yPos = $bindex-1 < 0 ? 0 : $brightness_high;
+							$yNeg = $y-1 < 0 ? 0 : ord($lights[($bindex-1) >> 1]) >> 4;
+							$yPos = $brightness_high;
 						}
-						/*$xNeg = $level->level->getBrightness($this->layer, $x-1, $y, $z);
-						$xPos = $level->level->getBrightness($this->layer, $x+1, $y, $z);
-						$yNeg = $level->level->getBrightness($this->layer, $x, $y-1, $z);
-						$yPos = $level->level->getBrightness($this->layer, $x, $y+1, $z);
-						$zNeg = $level->level->getBrightness($this->layer, $x, $y, $z-1);
-						$zPos = $level->level->getBrightness($this->layer, $x, $y, $z+1);*/
 						
 						
 						$v15 = $xNeg;
@@ -113,10 +138,8 @@ class LightUpdate
 						
 						if($newBrightness < 0) $newBrightness = 0;
 						if($lightEmission > $newBrightness) $newBrightness = $lightEmission;
-						//console("$isBlockLight $id $v15 $lightBlock $lightEmission $newBrightness");
 					}else{
 						$newBrightness = 0;
-						//console("NUL $newBrightness");
 					}
 					
 					if($brightness != $newBrightness){
@@ -125,7 +148,6 @@ class LightUpdate
 						}else{
 							$lights[$mindex] = chr(($brightness_high << 4) | $newBrightness);
 						}
-						//$level->level->setBrightness($this->layer, $x, $y, $z, $newBrightness);
 						
 						$v4 = $newBrightness-1;
 						if($v4 < 0) $v4 = 0;

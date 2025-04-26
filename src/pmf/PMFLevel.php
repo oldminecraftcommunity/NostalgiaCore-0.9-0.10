@@ -949,6 +949,18 @@ class PMFLevel extends PMF{
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$this->blockIds[$index][($cx << 11) | ($cz << 7) | $y] = chr($block);
+		
+		$height = ord($this->heightmap[$index][($cz << 4) | $cx]);
+		if(StaticBlock::$lightBlock[$block] != 0){
+			if($y >= $height) $this->recalcHeight($x, $y+1, $z);
+		}else{
+			$this->recalcHeight($x, $y, $z);
+		}
+		
+		$this->level->updateLight(LIGHTLAYER_SKY, $x, $y, $z, $x, $y, $z);
+		$this->level->updateLight(LIGHTLAYER_BLOCK, $x, $y, $z, $x, $y, $z);
+		$this->lightGaps($X, $Z, $cx, $cz);
+		
 		$this->chunkChange[$index] = true;
 		return true;
 	}
@@ -1069,7 +1081,6 @@ class PMFLevel extends PMF{
 		
 		if($old_b != $block || $old_m != $meta){
 			$this->blockIds[$index][$bindex] = chr($block);
-			//TODO also do same thing in setBlockID
 			
 			$height = ord($this->heightmap[$index][($cz << 4) | $cx]);
 			if(StaticBlock::$lightBlock[$block] != 0){

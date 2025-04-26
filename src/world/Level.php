@@ -488,24 +488,30 @@ class Level{
 			
 			//console("adding");
 			//TODO check is empty
-			
-			
-			/*foreach($this->lightUpdates as $update){
-				if($update->layer == $layer && $update->contains($minX, $minY, $minZ, $maxX, $maxY, $maxZ)){
-					--$this->lightUpdatesCount;
-					return;
-				}
-			}*/
 				
-			if($resize){
+			/*if($resize){
+				$max = 5;
+				$sz = count($this->lightUpdates);
+				if($sz < $max) $max = $sz;
+				foreach($this->lightUpdates as $index => $update){
+					if(--$max < 0) break;
+					if($update->layer == $layer && ($r = $update->expand($minX, $minY, $minZ, $maxX, $maxY, $maxZ))){
+						if($r != LightUpdate::ALREADY_CONTAINED){
+							unset($this->lightUpdates[$index]);
+							$index = "$layer {$update->minX} {$update->minY} {$update->minZ} {$update->maxX} {$update->maxY} {$update->maxZ}";
+							$this->lightUpdates[$index] = $update;
+						}
+						--$this->lightUpdatesCount;
+						return;
+					}
+				}
 				//TODO resize light updates if possible
-			}
-			
+			}*/
 			
 			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
 			$this->lightUpdates[$ind] = $update;
 			
-			if(count($this->lightUpdates) > 100000){
+			if(count($this->lightUpdates) % 100000 == 0){ //needs 1 more zero
 				ConsoleAPI::warn("Too many light updates, clearing.");
 				$this->lightUpdates = [];
 			}
@@ -591,8 +597,6 @@ class Level{
 			}
 			unset($this->resendBlocksToPlayers[$playerCID]);
 		}
-		
-		console(count($this->lightUpdates));
 		while($this->updateLights());
 	}
 	
@@ -607,7 +611,7 @@ class Level{
 		foreach($this->lightUpdates as $index => $upd){
 			if(--$maxUpdates <= 0){
 				--$this->lightDepth;
-				return true; //true;
+				return true;
 			}
 			
 			unset($this->lightUpdates[$index]);
