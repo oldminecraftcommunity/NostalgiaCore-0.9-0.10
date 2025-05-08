@@ -8,7 +8,8 @@ class Utils{
 
 	public static $online = true;
 	public static $ip = false;
-
+	public static $threads = [];
+	
 	/*public static function isOnline(){
 		return ((@fsockopen("8.8.8.8", 80, $e = null, $n = null, 2) !== false or @fsockopen("www.linux.org", 80, $e = null, $n = null, 2) !== false or @fsockopen("www.php.net", 80, $e = null, $n = null, 2) !== false) ? true:false);
 	}*/
@@ -20,6 +21,21 @@ class Utils{
 			OBJECT_ARROW, OBJECT_EGG, OBJECT_MINECART, OBJECT_PAINTING, OBJECT_PRIMEDTNT, OBJECT_SNOWBALL, OBJECT_TRIPOD_CAMERA => ENTITY_OBJECT,
 			default => $id,
 		};
+	}
+	
+	/**
+	 * Keeps thread reference in memory
+	 */
+	public static function addThread($t){
+		$id = spl_object_hash($t);
+		self::$threads[$id] = $t;
+	}
+	
+	/**
+	 *  Releases thread reference from memory. Thread should be stopped before calling this method.
+	 */
+	public static function removeThread($t){
+		unset(self::$threads[spl_object_hash($t)]);
 	}
 	
 	public static function wrapAngleTo360($angle)

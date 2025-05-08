@@ -21,6 +21,10 @@ class ExperimentalThreadedGenerator implements NewLevelGenerator, ThreadedGenera
 	public function __construct(array $settings = []){
 	}
 	
+	public function __destruct(){
+		$this->dataProvider->destroy();
+	}
+	
 	/**
 	 * 
 	 * {@inheritDoc}

@@ -4,7 +4,12 @@ abstract class ThreadedChunkDataProvider extends Threaded
 {
 	public $thread;
 	public function __construct(){
-		$this->thread = new ChunkGenerationThread($this);
+		Utils::addThread($this->thread = new ChunkGenerationThread($this));
+	}
+	
+	public function destroy(){
+		$this->thread->running = false;
+		Utils::removeThread($this->thread);
 	}
 	
 	public function startThread(){
