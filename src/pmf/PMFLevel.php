@@ -477,7 +477,7 @@ class PMFLevel extends PMF{
 		if($y < 0) return false;
 		if($y > 127) return true;
 		$index = PMFLevel::getIndex($x >> 4, $z >> 4);
-		
+		if(!isset($this->heightmap[$index])) return false;
 		return ord($this->heightmap[$index][(($z&0xf) << 4) | ($x&0xf)]) <= $y;
 	}
 	
@@ -625,7 +625,9 @@ class PMFLevel extends PMF{
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$index = $this->getIndex($X, $Z);
-		if(!isset($this->blockMetas[$index])) return 0;
+		if(!isset($this->blockMetas[$index])){
+			return 0;
+		}
 		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
@@ -648,6 +650,7 @@ class PMFLevel extends PMF{
 		$index = $this->getIndex($X, $Z);
 		if(!isset($this->blockMetas[$index])) return 0;
 		
+		
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$bindex = ($cx << 11) | ($cz << 7) | $y;
@@ -664,13 +667,14 @@ class PMFLevel extends PMF{
 			$old_m &= 0xf;
 		}
 		
-		if($old_m != $new_m){
+		if($old_m != $value){
 			if($layer == LIGHTLAYER_BLOCK) $this->blockLight[$index][$bindex >> 1] = chr($new_m);
 			else $this->skyLight[$index][$bindex >> 1] = chr($new_m);
 			
 			$this->chunkChange[$index] = true;
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -998,7 +1002,7 @@ class PMFLevel extends PMF{
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$bindex = ($cx << 11) | ($cz << 7) | $y;
-		$old_m = $this->blockMetas[$index][$bindex >> 1];
+		$old_m = ord($this->blockMetas[$index][$bindex >> 1]);
 		$new_m = 0;
 		if($bindex & 1){
 			$new_m = ($old_m & 0xf) | ($damage << 4);
@@ -1008,8 +1012,8 @@ class PMFLevel extends PMF{
 			$old_m &= 0xf;
 		}
 		
-		if($old_m != $new_m){
-			$this->blockMetas[$index][$bindex >> 1] = $new_m;
+		if($old_m != $damage){
+			$this->blockMetas[$index][$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;
 			return true;
 		}

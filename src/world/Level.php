@@ -175,7 +175,7 @@ class Level{
 		}
 
 		$ci = $this->level->getIndex($X, $Z);
-		$orderedBiomeIds = $this->level->biomeInfo[$ci];
+		$orderedHeightmap = $this->level->heightmap[$ci];
 		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
 		
 		$orderedIds = $this->level->blockIds[$ci]; 
@@ -248,7 +248,7 @@ class Level{
 		}
 		$orderedUncompressed = Utils::writeLInt($X) . Utils::writeLInt($Z) .
 		$orderedIds . $orderedData . $orderedSkyLight . $orderedLight .
-		$orderedBiomeIds . $orderedBiomeColors . $tileEntities;
+		$orderedHeightmap . $orderedBiomeColors . $tileEntities;
 		$ordered = zlib_encode($orderedUncompressed, ZLIB_ENCODING_DEFLATE, 6);
 		return $ordered;
 	}
@@ -462,15 +462,21 @@ class Level{
 		if($this->level->getBrightness($layer, $x, $y, $z) != $level){
 			//console("updating $x $y $z: {$this->level->getBrightness($layer, $x, $y, $z)} != {$level}");
 			$this->updateLight($layer, $x, $y, $z, $x, $y, $z);
+		}else{
+			//console("skipping update of $x $y $z: {$this->level->getBrightness($layer, $x, $y, $z)} == {$level}");
 		}
 	}
 	
 	public $lightUpdatesCount;
+	public $lightUpdatesIndx = -1;
+	/**
+	 * @var LightUpdate[]
+	 */
 	public $lightUpdates = [];
 	public function updateLight($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $resize=true){
 		if($this->lightDepth > 49) return false;
 		++$this->lightUpdatesCount;
-		if($this->lightUpdatesCount == 50){ //TODO 0.9.5 has 60?
+		if($this->lightUpdatesCount == 50){
 			--$this->lightUpdatesCount;
 			return;
 		}
@@ -479,41 +485,27 @@ class Level{
 		$avgZ = ($minZ + $maxZ) / 2;
 		
 		if($this->level->isChunkLoaded($avgX >> 4, $avgZ >> 4)){
-			$ind = "$layer $minX $minY $minZ $maxX $maxY $maxZ";
-			if(isset($this->lightUpdates[$ind])) {
-				--$this->lightUpdatesCount;
-				return;
-			}
-			
-			
-			//console("adding");
-			//TODO check is empty
-				
-			/*if($resize){
+			if($resize){
 				$max = 5;
-				$sz = count($this->lightUpdates);
+				$sz = $this->lightUpdatesIndx;
 				if($sz < $max) $max = $sz;
-				foreach($this->lightUpdates as $index => $update){
-					if(--$max < 0) break;
+				for($i = 0; $i < $max; ++$i){
+					$update = $this->lightUpdates[$i];
 					if($update->layer == $layer && ($r = $update->expand($minX, $minY, $minZ, $maxX, $maxY, $maxZ))){
-						if($r != LightUpdate::ALREADY_CONTAINED){
-							unset($this->lightUpdates[$index]);
-							$index = "$layer {$update->minX} {$update->minY} {$update->minZ} {$update->maxX} {$update->maxY} {$update->maxZ}";
-							$this->lightUpdates[$index] = $update;
-						}
 						--$this->lightUpdatesCount;
+						//console("added $minX $minY $minZ $maxX $maxY $maxZ into $update(index: $i) $r");
 						return;
 					}
 				}
-				//TODO resize light updates if possible
-			}*/
+			}
 			
 			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
-			$this->lightUpdates[$ind] = $update;
-			
-			if(count($this->lightUpdates) % 100000 == 0){ //needs 1 more zero
+			$this->lightUpdates[++$this->lightUpdatesIndx] = $update;
+			//console("added new light update at {$this->lightUpdatesIndx}");
+			if(count($this->lightUpdates) > 320031){
 				ConsoleAPI::warn("Too many light updates, clearing.");
 				$this->lightUpdates = [];
+				$this->lightUpdatesIndx = -1;
 			}
 		}
 		--$this->lightUpdatesCount;
@@ -523,7 +515,7 @@ class Level{
 		//$ents = $server->api->entity->getAll($this);
 		$this->updateSkyBrightness();
 		
-		if(!$this->stopTime) $this->time+=2;
+		//XXX debug purposes readd later if(!$this->stopTime) $this->time+=2;
 		
 		foreach($this->entityList as $k => $e){
 			if(!($e instanceof Entity)){
@@ -603,23 +595,31 @@ class Level{
 	public $lightDepth = 0;
 	public function updateLights(){
 		if($this->lightDepth > 49) return false;
-		++$this->lightDepth;
+		//++$this->lightDepth;
+		if($this->lightUpdatesIndx < 0) return false;
+		$total = 0;
+		$ss = 0;
+		$bb = 0;
+		$now = count($this->lightUpdates);
+		$lus = $this->lightUpdates;
+		$ndx = $this->lightUpdatesIndx;
 		
-		$maxUpdates = 500;
-		//console(count($this->lightUpdates));
-		restart:
-		foreach($this->lightUpdates as $index => $upd){
-			if(--$maxUpdates <= 0){
-				--$this->lightDepth;
-				return true;
-			}
-			
-			unset($this->lightUpdates[$index]);
+		$this->lightUpdates = [];
+		$this->lightUpdatesIndx = -1;
+		
+		do{
+			$upd = $lus[$ndx];
+			//console("updating $upd (index: {$this->lightUpdatesIndx})");
+			--$ndx;
+			if($upd->layer) ++$ss;
+			else ++$bb;
 			$upd->update($this);
-		}
-		if(count($this->lightUpdates) > 0) goto restart;
+			++$total;
+		}while($ndx >= 0);
+		console("total upd {$total}($ss $bb), expected: {$now} ".count($this->lightUpdates));
+		if(count($this->lightUpdates) > 0) return true;
 		
-		--$this->lightDepth;
+		//--$this->lightDepth;
 		return false;
 	}
 	

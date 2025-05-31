@@ -9,7 +9,8 @@ class SuperflatGenerator implements LevelGenerator{
 	private $level, $random, $structure, $chunks, $options, $floorLevel, $populators = [];
 	public $preset;
 	public function __construct(array $options = []){
-		$this->preset = "2;7,59x1,3x3,2;1;spawn(radius=10 block=89),decoration(treecount=80 grasscount=45)";
+		//$this->preset = "2;7,59x1,3x3,2;1;spawn(radius=10 block=89),decoration(treecount=80 grasscount=45)";
+		$this->preset = "2;7,59x1,3x3,2;1;decoration(treecount=80 grasscount=45)";
 		$this->options = $options;
 		if(isset($options["preset"])){
 			$this->parsePreset($options["preset"]);
@@ -108,6 +109,7 @@ class SuperflatGenerator implements LevelGenerator{
 	}
 
 	public function populateChunk($chunkX, $chunkZ){
+		$this->level->level->setPopulated($chunkX, $chunkZ);
 		foreach($this->populators as $populator){
 			$this->random->setSeed((int) ($chunkX * 0xdead + $chunkZ * 0xbeef) ^ $this->level->getSeed());
 			$populator->populate($this->level, $chunkX, $chunkZ, $this->random);
