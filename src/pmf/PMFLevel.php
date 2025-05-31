@@ -478,7 +478,8 @@ class PMFLevel extends PMF{
 		if($y > 127) return true;
 		$index = PMFLevel::getIndex($x >> 4, $z >> 4);
 		if(!isset($this->heightmap[$index])) return false;
-		return ord($this->heightmap[$index][(($z&0xf) << 4) | ($x&0xf)]) <= $y;
+		
+		return $y >= ord($this->heightmap[$index][(($z&0xf) << 4) | ($x&0xf)]);
 	}
 	
 	public function recalcHeight($x, $y, $z){
@@ -576,7 +577,7 @@ class PMFLevel extends PMF{
 		$hhere = $this->getHeightmapValue($x, $z);
 		if($hhere < $height){
 			$this->level->updateLight(LIGHTLAYER_SKY, $x, $hhere, $z, $x, $height, $z);
-		}else if($hhere != $height){
+		}else if($hhere > $height){
 			$this->level->updateLight(LIGHTLAYER_SKY, $x, $height, $z, $x, $hhere, $z);
 		}
 	}
@@ -584,8 +585,9 @@ class PMFLevel extends PMF{
 	public function recalcHeightmap($X, $Z){
 		$index = PMFLevel::getIndex($X, $Z);
 		$blocks = &$this->blockIds[$index];
-		$heightmap = $this->heightmap[$index];
+		$heightmap = &$this->heightmap[$index];
 		$topblock = 127;
+		
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
 				$y = 127;
@@ -602,12 +604,13 @@ class PMFLevel extends PMF{
 				$yLight = 127;
 				do{
 					$lightLevel -= StaticBlock::$lightBlock[ord($blocks[$xzIndex|$yLight])];
-					if($lightLevel > 0) $this->setBrightness(LIGHTLAYER_SKY, $x, $yLight, $z, $lightLevel);
+					if($lightLevel > 0) $this->setBrightness(LIGHTLAYER_SKY, $X*16 + $x, $yLight, $Z*16 + $z, $lightLevel);
 				}while(--$yLight > 0 && $lightLevel > 0);
 			}
 		}
 		
 		$this->maxChunkHeight[$index] = $topblock;
+		
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
 				$this->lightGaps($X, $Z, $x, $z);
@@ -660,10 +663,10 @@ class PMFLevel extends PMF{
 		$new_m = 0;
 		
 		if($bindex & 1){
-			$new_m = ($old_m & 0xf) | ($value << 4);
+			$new_m = ($old_m & 0x0f) | ($value << 4);
 			$old_m >>= 4;
 		}else {
-			$new_m = ($old_m << 4) | ($value);
+			$new_m = ($old_m & 0xf0) | ($value);
 			$old_m &= 0xf;
 		}
 		
@@ -767,9 +770,8 @@ class PMFLevel extends PMF{
 	
 	public function loadChunk($X, $Z, $populate = false){
 		$index = $this->getIndex($X, $Z);
-
+		
 		if($this->isChunkLoaded($X, $Z)) return true;
-
 		$cp = $this->getChunkPath($X, $Z);
 		if(!is_file($cp)) return false;
 		$chunk = file_get_contents($cp);
@@ -1005,10 +1007,10 @@ class PMFLevel extends PMF{
 		$old_m = ord($this->blockMetas[$index][$bindex >> 1]);
 		$new_m = 0;
 		if($bindex & 1){
-			$new_m = ($old_m & 0xf) | ($damage << 4);
+			$new_m = ($old_m & 0x0f) | ($damage << 4);
 			$old_m >>= 4;
 		}else {
-			$new_m = ($old_m << 4) | ($damage);
+			$new_m = ($old_m & 0xf0) | ($damage);
 			$old_m &= 0xf;
 		}
 		
@@ -1075,11 +1077,11 @@ class PMFLevel extends PMF{
 		$old_m = ord($this->blockMetas[$index][$mindex] ?? '\x00');
 		$new_m = 0;
 		if($bindex & 1){
-			$new_m = ($old_m & 0xf) | ($meta << 4);
+			$new_m = ($old_m & 0x0f) | ($meta << 4);
 			$old_m >>= 4;
 		}
 		else {
-			$new_m = ($old_m << 4) | $meta;
+			$new_m = ($old_m & 0xf0) | $meta;
 			$old_m &= 0xf;
 		}
 		

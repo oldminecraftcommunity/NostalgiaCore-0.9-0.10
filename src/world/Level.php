@@ -181,7 +181,7 @@ class Level{
 		$orderedIds = $this->level->blockIds[$ci]; 
 		$orderedData = $this->level->blockMetas[$ci];
 		$orderedLight = $this->level->blockLight[$ci];
-		$orderedSkyLight = str_repeat("\x00", 16*16*64); //$this->level->skyLight[$ci];
+		$orderedSkyLight = $this->level->skyLight[$ci];
 		
 		$chunkTiles = [];
 		$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '".$this->getName()."' AND x >= ".($X * 16 - 1)." AND x < ".($X * 16 + 17)." AND z >= ".($Z * 16 - 1)." AND z < ".($Z * 16 + 17).";");
@@ -451,6 +451,9 @@ class Level{
 	}
 	
 	public function updateLightIfOtherThan($layer, $x, $y, $z, $level){
+		if($y < 0 || $y > 127) return;
+		if(!$this->level->isChunkLoaded($x >> 4, $z >> 4)) return;
+		
 		if($layer == LIGHTLAYER_SKY){
 			if($this->level->isSkyLit($x, $y, $z)) $level = 15;
 		}else if($layer == LIGHTLAYER_BLOCK){
@@ -593,7 +596,7 @@ class Level{
 	}
 	
 	public $lightDepth = 0;
-	public function updateLights(){
+	public function updateLights(&$m = 0){
 		if($this->lightDepth > 49) return false;
 		//++$this->lightDepth;
 		if($this->lightUpdatesIndx < 0) return false;
@@ -604,7 +607,7 @@ class Level{
 		$lus = $this->lightUpdates;
 		$ndx = $this->lightUpdatesIndx;
 		
-		$this->lightUpdates = [];
+		/*$this->lightUpdates = [];
 		$this->lightUpdatesIndx = -1;
 		
 		do{
@@ -615,9 +618,22 @@ class Level{
 			else ++$bb;
 			$upd->update($this);
 			++$total;
-		}while($ndx >= 0);
+		}while($ndx >= 0);*/
+		
+		do{
+			$upd = $this->lightUpdates[$this->lightUpdatesIndx];
+			unset($this->lightUpdates[$this->lightUpdatesIndx]);
+			--$this->lightUpdatesIndx;
+			if($upd->layer) ++$ss;
+			else ++$bb;
+			$upd->update($this);
+			++$total;
+		}while($this->lightUpdatesIndx >= 0);
+		//var_dump(array_keys($this->level->blockIds));
 		console("total upd {$total}($ss $bb), expected: {$now} ".count($this->lightUpdates));
+		$m += $total;
 		if(count($this->lightUpdates) > 0) return true;
+		
 		
 		//--$this->lightDepth;
 		return false;

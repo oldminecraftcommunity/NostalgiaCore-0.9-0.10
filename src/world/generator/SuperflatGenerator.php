@@ -76,7 +76,7 @@ class SuperflatGenerator implements LevelGenerator{
 		}
 		for($i = 0; $i < 256; ++$i){
 			$this->chunk[0] .= $blocks;
-			$this->chunk[1] .= $metas;
+			if($i % 2 == 0) $this->chunk[1] .= $metas;
 		}
 		//TODO fix metas
 
@@ -151,7 +151,7 @@ class SuperflatGenerator implements LevelGenerator{
 			}
 		}
 
-		if(isset($this->options["decoration"])){
+		/*if(isset($this->options["decoration"])){
 			$treecount = 80;
 			$grasscount = 120;
 			if(isset($this->options["spawn"]["treecount"])){
@@ -176,7 +176,7 @@ class SuperflatGenerator implements LevelGenerator{
 					TallGrassObject::growGrass($this->level, new Vector3($centerX, $this->floorLevel - 1, $centerZ), $this->random, 8+$this->random->nextInt(33));
 				}
 			}
-		}
+		}*/
 	}
 
 	public function getSpawn(){

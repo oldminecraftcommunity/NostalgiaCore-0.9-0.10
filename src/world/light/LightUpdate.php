@@ -62,9 +62,10 @@ class LightUpdate extends LightUpdateBase
 		for($x = $this->minX; $x <= $this->maxX; ++$x){
 			for($z = $this->minZ; $z <= $this->maxZ; ++$z){
 				if(!$level->level->isChunkLoaded($x >> 4, $z >> 4)){
-					console(($x>>4)." ".($z>>4)." is not loaded skipping");
+					console("aborting unloaded chunk at $x $z");
 					continue;
 				}
+				
 				for($y = $this->minY; $y <= $this->maxY; ++$y){
 					$brightness = $level->level->getBrightness($layer, $x, $y, $z);
 					$blockID = $level->level->getBlockID($x, $y, $z);
@@ -72,7 +73,9 @@ class LightUpdate extends LightUpdateBase
 					if($lightBlock == 0) $lightBlock = 1;
 					$lightEmission = 0;
 					if($layer == LIGHTLAYER_SKY){
-						if($level->level->isSkyLit($x, $y, $z)) $lightEmission = 15;
+						if($level->level->isSkyLit($x, $y, $z)){
+							$lightEmission = 15;
+						}
 					}else{
 						$lightEmission = StaticBlock::$lightEmission[$blockID];
 					}
@@ -101,6 +104,7 @@ class LightUpdate extends LightUpdateBase
 					
 					if($brightness != $newBrightness){
 						$level->level->setBrightness($layer, $x, $y, $z, $newBrightness);
+						
 						$v4 = $newBrightness - 1;
 						if($v4 < 0) $v4 = 0;
 						$level->updateLightIfOtherThan($layer, $x-1, $y, $z, $v4);

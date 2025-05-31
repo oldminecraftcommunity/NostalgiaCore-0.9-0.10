@@ -42,6 +42,11 @@ class WorldGenerator{
 		for($Z = 0; $Z < $this->width; ++$Z){
 			for($X = 0; $X < $this->width; ++$X){
 				$this->generator->populateChunk($X, $Z);
+				//13267025
+				//08388608
+				$m = 0;
+				while($this->level->updateLights($m));
+				console("light update for $X $Z finished $m");
 			}
 			console("[NOTICE] Populating level " . ceil((($Z + 1) / $this->width) * 100) . "%");
 		}
