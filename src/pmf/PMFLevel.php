@@ -776,7 +776,7 @@ class PMFLevel extends PMF{
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$bindex = ($cx << 11) | ($cz << 7) | $y;
-		$old_m = $this->blockMetas[$index][$bindex >> 1];
+		$old_m = ord($this->blockMetas[$index][$bindex >> 1]);
 		$new_m = 0;
 		if($bindex & 1){
 			$new_m = ($old_m & 0xf) | ($damage << 4);
@@ -786,8 +786,8 @@ class PMFLevel extends PMF{
 			$old_m &= 0xf;
 		}
 		
-		if($old_m != $new_m){
-			$this->blockMetas[$index][$bindex >> 1] = $new_m;
+		if($old_m != $damage){
+			$this->blockMetas[$index][$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;
 			return true;
 		}
