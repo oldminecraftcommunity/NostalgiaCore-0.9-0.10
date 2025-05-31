@@ -181,7 +181,7 @@ class Level{
 		$orderedIds = $this->level->blockIds[$ci]; 
 		$orderedData = $this->level->blockMetas[$ci];
 		$orderedLight = $this->level->blockLight[$ci];
-		$orderedSkyLight = $this->level->skyLight[$ci];
+		$orderedSkyLight = str_repeat("\x00", 16*16*64); //$this->level->skyLight[$ci];
 		
 		$chunkTiles = [];
 		$tiles = $this->server->query("SELECT ID FROM tiles WHERE spawnable = 1 AND level = '".$this->getName()."' AND x >= ".($X * 16 - 1)." AND x < ".($X * 16 + 17)." AND z >= ".($Z * 16 - 1)." AND z < ".($Z * 16 + 17).";");
