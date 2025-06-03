@@ -1012,14 +1012,15 @@ class Entity extends Position
 
 	public function close()
 	{
-		if($this->closed === false){
+		//if($this->closed === false){
 			$this->closed = true;
-			if($this?->linkedEntity?->linkedEntity?->eid === $this->eid){
-				$this->linkedEntity->linkedEntity = false;
-			}
+			//TODO fix:
+			//if($this?->linkedEntity?->linkedEntity?->eid === $this->eid){
+			//	$this->linkedEntity->linkedEntity = false;
+			//}
 			$this->linkedEntity = false;
 			$this->server->api->entity->remove($this->eid);
-		}
+		//}
 	}
 
 	public function __destruct()

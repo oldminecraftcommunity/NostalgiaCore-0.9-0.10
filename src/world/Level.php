@@ -397,6 +397,22 @@ class Level{
 		return abs($X - $spawnX) <= 1 and abs($Z - $spawnZ) <= 1;
 	}
 
+	/**
+	 * Gets block brightness based on skylight, blocklight and subtracts skyDarken.
+	 * @param int $x
+	 * @param int $y
+	 * @param int $z
+	 */
+	public function getRawBrightness(int $x, int $y, int $z){
+		//TODO special way to do it for some blocks
+		
+		$bl = $this->level->getBrightness(LIGHTLAYER_BLOCK, $x, $y, $z);
+		$l = $this->level->getBrightness(LIGHTLAYER_SKY, $x, $y, $z) - $this->skyDarken;
+		if($bl > $l) $l = $bl;
+		if($l < 0) $l = 0;
+		return $l;
+	}
+	
 	public function getBlockRaw(Vector3 $pos){
 		$b = $this->level->getBlock($pos->x, $pos->y, $pos->z);
 		return BlockAPI::get($b[0], $b[1], new Position($pos->x, $pos->y, $pos->z, $this));
@@ -477,7 +493,6 @@ class Level{
 	 */
 	public $lightUpdates = [];
 	public function updateLight($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $resize=true){
-		if($this->lightDepth > 49) return false;
 		++$this->lightUpdatesCount;
 		if($this->lightUpdatesCount == 50){
 			--$this->lightUpdatesCount;
@@ -592,22 +607,19 @@ class Level{
 			}
 			unset($this->resendBlocksToPlayers[$playerCID]);
 		}
-		while($this->updateLights());
+		$this->updateLights();
 	}
 	
-	public $lightDepth = 0;
 	public function updateLights(&$m = 0){
-		if($this->lightDepth > 49) return false;
-		//++$this->lightDepth;
 		if($this->lightUpdatesIndx < 0) return false;
-		$total = 0;
+		/*$total = 0;
 		$ss = 0;
 		$bb = 0;
 		$now = count($this->lightUpdates);
 		$lus = $this->lightUpdates;
 		$ndx = $this->lightUpdatesIndx;
 		
-		/*$this->lightUpdates = [];
+		$this->lightUpdates = [];
 		$this->lightUpdatesIndx = -1;
 		
 		do{
@@ -619,23 +631,17 @@ class Level{
 			$upd->update($this);
 			++$total;
 		}while($ndx >= 0);*/
-		
+		$limit = 500; //in vanilla limit is 60 but it is too slow?
 		do{
 			$upd = $this->lightUpdates[$this->lightUpdatesIndx];
 			unset($this->lightUpdates[$this->lightUpdatesIndx]);
 			--$this->lightUpdatesIndx;
-			if($upd->layer) ++$ss;
-			else ++$bb;
 			$upd->update($this);
-			++$total;
+			if(!--$limit) return true;
 		}while($this->lightUpdatesIndx >= 0);
-		//var_dump(array_keys($this->level->blockIds));
-		console("total upd {$total}($ss $bb), expected: {$now} ".count($this->lightUpdates));
-		$m += $total;
+		
 		if(count($this->lightUpdates) > 0) return true;
 		
-		
-		//--$this->lightDepth;
 		return false;
 	}
 	
