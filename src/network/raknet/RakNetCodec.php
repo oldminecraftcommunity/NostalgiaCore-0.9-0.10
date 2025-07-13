@@ -1,7 +1,6 @@
 <?php
 
 class RakNetCodec{
-
 	public $packet;
 	public $buffer;
 	public function __construct(RakNetPacket $packet){
@@ -26,6 +25,7 @@ class RakNetCodec{
 			case RakNetInfo::OPEN_CONNECTION_REPLY_2:
 				$this->buffer .= RakNetInfo::MAGIC;
 				$this->putLong($this->packet->serverID);
+				$this->putInt($this->packet->ip);
 				$this->putShort($this->packet->port);
 				$this->putShort($this->packet->mtuSize);
 				$this->putByte(0); //Server security
