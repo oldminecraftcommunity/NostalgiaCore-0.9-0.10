@@ -139,6 +139,8 @@ class PocketMinecraftServer{
 	public function startDatabase(){
 		$this->preparedSQL = new stdClass();
 		$this->preparedSQL->entity = new stdClass();
+		$this->preparedSQL->player = new stdClass();
+		
 		$this->database = new SQLite3(":memory:");
 		$this->query("PRAGMA journal_mode = OFF;");
 		$this->query("PRAGMA encoding = \"UTF-8\";");
@@ -156,6 +158,9 @@ class PocketMinecraftServer{
 		$this->preparedSQL->updateAction = $this->database->prepare("UPDATE actions SET last = :time WHERE ID = :id;");
 		$this->preparedSQL->entity->setPosition = $this->database->prepare("UPDATE entities SET x = :x, y = :y, z = :z, pitch = :pitch, yaw = :yaw WHERE EID = :eid ;");
 		$this->preparedSQL->entity->setLevel = $this->database->prepare("UPDATE entities SET level = :level WHERE EID = :eid ;");
+		
+		$this->preparedSQL->player->getEq = $this->database->prepare("SELECT ip,port,name FROM players WHERE name = :name;");
+		$this->preparedSQL->player->getLike = $this->database->prepare("SELECT ip,port,name FROM players WHERE name LIKE :name;");
 	}
 
 	public function query($sql, $fetch = false){
