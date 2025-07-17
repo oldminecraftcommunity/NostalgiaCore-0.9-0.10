@@ -498,7 +498,11 @@ class PlayerAPI{
 			if($player->username != "" and ($player->data instanceof Config)){
 				$this->saveOffline($player->data);
 			}
-			$this->server->query("DELETE FROM players WHERE name = '" . $player->username . "';");
+			
+			$this->server->preparedSQL->player->deleteCID->reset();
+			$this->server->preparedSQL->player->deleteCID->bindValue(":CID", $CID);
+			$this->server->preparedSQL->player->getEq->execute();
+			
 			$this->server->api->entity->remove($player->eid);
 			unset($this->server->clients[$CID]);
 			if($player->entity instanceof Entity){
