@@ -166,9 +166,9 @@ class Entity extends Position
 				$this->hasGravity = true;
 				break;
 			case ENTITY_OBJECT:
-				$this->x = isset($this->data["TileX"]) ? $this->data["TileX"] : $this->x;
-				$this->y = isset($this->data["TileY"]) ? $this->data["TileY"] : $this->y;
-				$this->z = isset($this->data["TileZ"]) ? $this->data["TileZ"] : $this->z;
+				$this->x = isset($this->data["TileX"]) ? (float) $this->data["TileX"] : $this->x;
+				$this->y = isset($this->data["TileY"]) ? (float) $this->data["TileY"] : $this->y;
+				$this->z = isset($this->data["TileZ"]) ? (float) $this->data["TileZ"] : $this->z;
 				$this->setHealth(1, "generic");
 				// $this->setName((isset($objects[$this->type]) ? $objects[$this->type]:$this->type));
 				$this->width = 1;
