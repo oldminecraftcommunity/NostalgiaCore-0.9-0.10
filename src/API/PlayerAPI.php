@@ -475,7 +475,7 @@ class PlayerAPI{
 
 	public function spawnToAllPlayers(Player $player){
 		foreach($this->getAll() as $p){
-			if($p !== $player and ($p->entity instanceof Entity) and ($player->entity instanceof Entity)){
+			if($p !== $player and ($p->entity instanceof Entity) and ($player->entity instanceof Entity) && $p->spawned){
 				$player->entity->spawn($p);
 				if($p->level !== $player->level){
 					$pk = new MoveEntityPacket_PosRot;

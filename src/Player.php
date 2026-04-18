@@ -1481,7 +1481,6 @@ class Player{
 				$this->entity->setHealth($this->data->get("health"), "spawn", true);
 				
 				$this->server->api->entity->spawnAll($this);
-				$this->server->api->entity->spawnToAll($this->entity);
 
 				$array = explode("@n", (string)$this->server->motd);
 				foreach($array as $msg){
