@@ -785,6 +785,7 @@ class Entity extends Position
 						$pk->yaw = $this->yaw;
 						$pk->pitch = $this->pitch;
 						$pk->bodyYaw = $this->yaw;
+						$pk->teleport = false; //interpolate movement
 						$this->server->api->player->broadcastPacket($players, $pk);
 					} else{
 						

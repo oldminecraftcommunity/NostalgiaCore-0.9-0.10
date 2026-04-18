@@ -232,7 +232,14 @@ class Player{
 				foreach($this->level->players as $player){
 					if($player !== $this and $player->entity instanceof Entity){
 						$pk = new MovePlayerPacket();
-						$pk->entities = [[$player->entity->eid, $player->entity->x, $player->entity->y, $player->entity->z, $player->entity->yaw, $player->entity->pitch]];
+						$pk->eid = $player->entity->eid;
+						$pk->x = $player->entity->x;
+						$pk->y = $player->entity->y;
+						$pk->z = $player->entity->z;
+						$pk->yaw = $player->entity->yaw;
+						$pk->pitch = $player->entity->pitch;
+						$pk->bodyYaw = $player->entity->headYaw;
+						$pk->teleport = 1;
 						$this->dataPacket($pk);
 
 						$pk = new PlayerEquipmentPacket;
@@ -481,8 +488,8 @@ class Player{
 		if(!($this->entity instanceof Entity) or $this->connected === false){
 			return false;
 		}
-		$X = ((int)$this->entity->x) >> 4;
-		$Z = ((int)$this->entity->z) >> 4;
+		$X = floor($this->entity->x) >> 4;
+		$Z = floor($this->entity->z) >> 4;
 		
 		if($force === false && $X === $this->prevChunkX && $Z === $this->prevChunkZ){
 			return; //doesnt need reorder
@@ -509,7 +516,7 @@ class Player{
 		
 	}
 	
-	public $chunkTicker = 0;
+	public $chunkTicker = 0, $waitBeforeSendingChunks = 0;
 	public function entityTick(){
 		//ConsoleAPI::debug("{$this->username}, cl: ".count($this->chunksLoaded).", oc: ".count($this->chunksOrder));
 		if(count($this->chunksOrder) <= 0 && $this->level->generatorType != 0){
@@ -517,10 +524,15 @@ class Player{
 		}
 		//console("biome: ".$this->entity->level->level->getBiomeId((int)$this->entity->x, (int)$this->entity->z));
 		if($this->isSleeping) ++$this->sleepingTime;
-		if($this->chunkTicker++ > PocketMinecraftServer::$chukSendDelay){
-			$this->getNextChunk($this->level);
-			$this->chunkTicker = 0;
+		if($this->waitBeforeSendingChunks > 0){
+			--$this->waitBeforeSendingChunks;
+		}else{
+			if($this->chunkTicker++ > PocketMinecraftServer::$chukSendDelay){
+				$this->getNextChunk($this->level);
+				$this->chunkTicker = 0;
+			}
 		}
+		
 	}
 	
 	public function getNextChunk($world){
@@ -1430,6 +1442,7 @@ class Player{
 				$pk->gamemode = $this->gamemode & 0x01;
 				$pk->eid = 0;
 				$this->dataPacket($pk);
+				$this->waitBeforeSendingChunks = 20;
 				$this->lastCorrect = new Vector3($this->entity->x, $this->entity->y, $this->entity->z);
 				if(($level = $this->server->api->level->get($this->data->get("spawn")["level"])) !== false){
 					$this->spawnPosition = new Position($this->data->get("spawn")["x"], $this->data->get("spawn")["y"], $this->data->get("spawn")["z"], $level);
@@ -1466,7 +1479,7 @@ class Player{
 				
 				console("[INFO] " . FORMAT_AQUA . $this->username . FORMAT_RESET . "[/" . $this->ip . ":" . $this->port . "] logged in with entity id " . $this->eid . " at (" . $this->entity->level->getName() . ", " . round($this->entity->x, 2) . ", " . round($this->entity->y, 2) . ", " . round($this->entity->z, 2) . ")");
 				$this->entity->setHealth($this->data->get("health"), "spawn", true);
-
+				
 				$this->server->api->entity->spawnAll($this);
 				$this->server->api->entity->spawnToAll($this->entity);
 
@@ -1499,7 +1512,6 @@ class Player{
 					$this->blocked = false;
 					$this->server->handle("player.spawn", $this);
 					$this->server->api->chat->broadcast($this->username." joined the game");
-					//console("Current position: {$this->entity}");
 					$this->server->api->player->spawnAllPlayers($this);
 					$this->server->api->player->spawnToAllPlayers($this);
 					$this->teleport($this->entity);
