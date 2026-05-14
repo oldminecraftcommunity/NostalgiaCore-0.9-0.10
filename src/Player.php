@@ -1517,8 +1517,32 @@ class Player{
 					return;
 				}
 				if($this->isSleeping) break;
+				
+				//prevent crash caused by nan values
+				if(is_nan($packet->x) || is_nan($packet->y) || is_nan($packet->z)){
+					ConsoleAPI::warn("{$this->username} Attempted to crash the server using NaN position!");
+					$this->close("invalid position");
+					break;
+				}
+				
 				if(($this->entity instanceof Entity) and $packet->messageIndex > $this->lastMovement){
 					$this->lastMovement = $packet->messageIndex;
+					
+					//prevent all movement this far - vanilla collisions break there
+					//farther distances(like inf) may cause client and server crash
+					if(abs($packet->x) >= 8388608 || abs($packet->y) >= 8388608 || abs($packet->z) >= 8388608){
+						$pk = new MovePlayerPacket();
+						$pk->x = $this->entity->x;
+						$pk->y = $this->entity->y;
+						$pk->z = $this->entity->z;
+						$pk->yaw = $this->entity->yaw;
+						$pk->pitch = $this->entity->pitch;
+						$pk->bodyYaw = $this->entity->headYaw;
+						$pk->teleport = 1;
+						$this->dataPacket($pk);
+						break;
+					}
+					
 					$newPos = new Vector3($packet->x, $packet->y, $packet->z);
 					
 					if($this->forceMovement instanceof Vector3){
