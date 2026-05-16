@@ -152,7 +152,7 @@ class Level{
 		$orderedData = "";
 		$orderedSkyLight = "";
 		$orderedLight = "";
-		$orderedBiomeIds = "";
+		$orderedHeightmap = str_repeat("\x00", 256);
 		$orderedBiomeColors = "";
 		$tileEntities = "";
 		
@@ -164,7 +164,6 @@ class Level{
 		}
 
 		$ci = $this->level->getIndex($X, $Z);
-		$orderedBiomeIds = $this->level->biomeInfo[$ci];
 		$orderedBiomeColors = $this->level->biomeColorInfo[$ci];
 		
 		$orderedIds = $this->level->blockIds[$ci]; 
@@ -237,7 +236,7 @@ class Level{
 		}
 		$orderedUncompressed = Utils::writeLInt($X) . Utils::writeLInt($Z) .
 		$orderedIds . $orderedData . $orderedSkyLight . $orderedLight .
-		$orderedBiomeIds . $orderedBiomeColors . $tileEntities;
+		$orderedHeightmap . $orderedBiomeColors . $tileEntities;
 		$ordered = zlib_encode($orderedUncompressed, ZLIB_ENCODING_DEFLATE, 6);
 		return $ordered;
 	}
