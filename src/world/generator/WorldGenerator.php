@@ -31,25 +31,18 @@ class WorldGenerator{
 
 	public function generate(){
 		$this->generator->init($this->level, $this->random);
+		$this->level->instantLightUpdates = true;
 		for($Z = 0; $Z < $this->width; ++$Z){
 			for($X = 0; $X < $this->width; ++$X){
 				$this->generator->generateChunk($X, $Z);
-			}
-			console("[NOTICE] Generating level " . ceil((($Z + 1) / $this->width) * 100) . "%");
-		}
-		console("[NOTICE] Populating level");
-		$this->generator->populateLevel();
-		for($Z = 0; $Z < $this->width; ++$Z){
-			for($X = 0; $X < $this->width; ++$X){
 				$this->generator->populateChunk($X, $Z);
-				//13267025
-				//08388608
-				$m = 0;
-				while($this->level->updateLights($m));
-				console("light update for $X $Z finished $m");
 			}
-			console("[NOTICE] Populating level " . ceil((($Z + 1) / $this->width) * 100) . "%");
+			console("[NOTICE] Generating and populating level " . ceil((($Z + 1) / $this->width) * 100) . "%");
 		}
+		console("[NOTICE] Full Populating level...");
+		$this->generator->populateLevel();
+		
+		$this->level->instantLightUpdates = false;
 
 		$this->level->setSpawn($this->generator->getSpawn());
 		$this->level->save(true, true);

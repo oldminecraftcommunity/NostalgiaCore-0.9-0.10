@@ -763,8 +763,11 @@ class PMFLevel extends PMF{
 			return false;
 		}
 		$this->initCleanChunk($X, $Z);
+		$prev = $this->level->instantLightUpdates;
+		$this->level->instantLightUpdates = true;
 		$generator->generateChunk($X, $Z);
 		$generator->populateChunk($X, $Z);
+		$this->level->instantLightUpdates = $prev;
 	}
 
 	
@@ -809,7 +812,10 @@ class PMFLevel extends PMF{
 
 		$this->setPopulated($X, $Z, $populated);
 		if($populate && !$populated){
+			$prev = $this->level->instantLightUpdates;
+			$this->level->instantLightUpdates = true;
 			$this->level->generator->populateChunk($X, $Z);
+			$this->level->instantLightUpdates = $prev;
 		}else if($populated && !$hasbiomecolors){
 			$biomecolors = "";
 			for($z = 0; $z < 16; ++$z){
@@ -1046,7 +1052,10 @@ class PMFLevel extends PMF{
 	
 	public function createUnpopulatedChunk($X, $Z){
 		$this->initCleanChunk($X, $Z);
+		$prev = $this->level->instantLightUpdates;
+		$this->level->instantLightUpdates = true;
 		$this->level->generator->generateChunk($X, $Z);
+		$this->level->instantLightUpdates = $prev;
 		$this->fakeLoaded[self::getIndex($X, $Z)] = true;
 	}
 	

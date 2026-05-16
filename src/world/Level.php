@@ -163,7 +163,7 @@ class Level{
 		$orderedData = "";
 		$orderedSkyLight = "";
 		$orderedLight = "";
-		$orderedBiomeIds = "";
+		$orderedHeightmap = "";
 		$orderedBiomeColors = "";
 		$tileEntities = "";
 		
@@ -492,6 +492,7 @@ class Level{
 	 * @var LightUpdate[]
 	 */
 	public $lightUpdates = [];
+	public $instantLightUpdates = false;
 	public function updateLight($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ, $resize=true){
 		++$this->lightUpdatesCount;
 		if($this->lightUpdatesCount == 50){
@@ -518,12 +519,16 @@ class Level{
 			}
 			
 			$update = new LightUpdate($layer, $minX, $minY, $minZ, $maxX, $maxY, $maxZ);
-			$this->lightUpdates[++$this->lightUpdatesIndx] = $update;
-			//console("added new light update at {$this->lightUpdatesIndx}");
-			if(count($this->lightUpdates) > 320031){
-				ConsoleAPI::warn("Too many light updates, clearing.");
-				$this->lightUpdates = [];
-				$this->lightUpdatesIndx = -1;
+			if($this->instantLightUpdates){
+				$update->update($this);
+			}else{
+				$this->lightUpdates[++$this->lightUpdatesIndx] = $update;
+				//console("added new light update at {$this->lightUpdatesIndx}");
+				if(count($this->lightUpdates) > 80007){
+					ConsoleAPI::warn("Too many light updates, clearing.");
+					$this->lightUpdates = [];
+					$this->lightUpdatesIndx = -1;
+				}
 			}
 		}
 		--$this->lightUpdatesCount;

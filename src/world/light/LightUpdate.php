@@ -62,7 +62,7 @@ class LightUpdate extends LightUpdateBase
 		for($x = $this->minX; $x <= $this->maxX; ++$x){
 			for($z = $this->minZ; $z <= $this->maxZ; ++$z){
 				if(!$level->level->isChunkLoaded($x >> 4, $z >> 4)){
-					console("aborting unloaded chunk at $x $z");
+					//console("aborting unloaded chunk at $x $z");
 					continue;
 				}
 				
