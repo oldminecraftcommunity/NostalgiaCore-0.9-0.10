@@ -1525,6 +1525,19 @@ class Player{
 					break;
 				}
 				
+				if(is_infinite($packet->yaw) || is_infinite($packet->pitch) || is_infinite($packet->bodyYaw)){
+					ConsoleAPI::warn("{$this->username} Attempted to crash other clients using INF rotation!");
+					$this->close("invalid rotation");
+					break;
+				}
+				
+				//doesnt crash anything but allows players to break their model rendering(make them/head invisible)
+				if(is_nan($packet->yaw) || is_nan($packet->pitch) || is_nan($packet->bodyYaw)){
+					ConsoleAPI::warn("{$this->username} Attempted to break their model using NAN rotation!");
+					$this->close("invalid rotation");
+					break;
+				}
+				
 				if(($this->entity instanceof Entity) and $packet->messageIndex > $this->lastMovement){
 					$this->lastMovement = $packet->messageIndex;
 					
