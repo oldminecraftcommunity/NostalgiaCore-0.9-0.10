@@ -63,8 +63,15 @@ class Player{
 	public $loginData = [];
 	/** @var Level */
 	public $level;
-	private $server;
-	private $recoveryQueue = [];
+	private $server;	
+	
+	/**
+	* Stores packets that must be always received by clients.
+	* @var array
+	*/
+	public $packetAlwaysRecoverQueue = [];
+	
+	public $recoveryQueue = [];
 	private $receiveQueue = [];
 	private $resendQueue = [];
 	private $ackQueue = [];
@@ -103,8 +110,9 @@ class Player{
 	
 	public $prevChunkX = false, $prevChunkZ = false;
 	
-	public $blockSendQueue;
-	public $blockSendQueueLength = 0;
+	public $blockUpdateQueue;
+	public $blockUpdateQueueLength = 0;
+	public $blockUpdateQueueOrderIndex = 0;
 	/**
 	 * @param integer $clientID
 	 * @param string $ip
@@ -131,8 +139,8 @@ class Player{
 		$this->packetStats = [0, 0];
 		$this->buffer = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
 		$this->buffer->data = [];
-		$this->blockSendQueue = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
-		$this->blockSendQueue->data = [];
+		$this->blockUpdateQueue = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
+		$this->blockUpdateQueue->data = [];
 		$this->server->schedule(1, [$this, "handlePacketQueues"], [], true);
 		$this->server->schedule(20 * 60, [$this, "clearQueue"], [], true);
 		$this->evid[] = $this->server->event("server.close", [$this, "close"]);
@@ -267,10 +275,6 @@ class Player{
 			$this->lastCorrect = $resyncpos;
 			$this->entity->fallY = false;
 			$this->entity->fallStart = false;
-			//if($terrain === true){
-				
-				//$this->getNextChunk($this->level);
-			//}*/
 			$this->entity->check = true;
 			if($force === true){
 				$this->forceMovement = $resyncpos;
@@ -282,6 +286,7 @@ class Player{
 			$this->entity->updateLast();
 			$this->entity->calculateVelocity();
 		}
+		$this->blockMovementUntilLoaded(floor($pos->x), floor($pos->z));
 		
 		$this->orderChunks(true);
 		$this->getNextChunk($this->level);
@@ -301,22 +306,64 @@ class Player{
 		$this->dataPacket($pk);
 	}
 	
-	public function addToBlockSendQueue(RakNetDataPacket $packet){
+	public function blockQueueDataPacket_big(RakNetDataPacket $pk){
+		$sendtime = microtime(true);
+		$size = $this->MTU - 34;
+		if($size <= 0) return false;
+		$buffer = str_split($pk->buffer, $size);
+		$bigCnt = $this->bigCnt;
+		$this->bigCnt = ($this->bigCnt + 1) % 0x10000;
+		$cnts = [];
+		$bufCount = count($buffer);
+		
+		$orderIndex = $this->blockUpdateQueueOrderIndex++;
+		foreach($buffer as $i => $buf){
+			$cnts[] = $count = $this->counter[0]++;
+			
+			$pk = new UnknownPacket;
+			$pk->packetID = $pk->pid();
+			$pk->reliability = RakNetInfo::RELIABILITY_RELIABLE_ORDERED;
+			
+			$pk->orderChannel = Player::BLOCKUPDATE_ORDER_CHANNEL;
+			$pk->orderIndex = $orderIndex;
+			
+			$pk->hasSplit = true;
+			$pk->splitCount = $bufCount;
+			$pk->splitID = $bigCnt;
+			$pk->splitIndex = $i;
+			$pk->buffer = $buf;
+			$pk->messageIndex = $this->counter[3]++;
+			
+			$rk = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
+			$rk->data[] = $pk;
+			$rk->seqNumber = $count;
+			$rk->sendtime = $sendtime;
+			$this->packetAlwaysRecoverQueue[$count] = $rk;
+			$this->send($rk);
+		}
+		return $cnts;
+	}
+	
+	public function blockQueueDataPacket(RakNetDataPacket $pk){
 		if($this->connected === false) return false;
 		
-		$packet->encode();
-		$len = strlen($packet->buffer) + 1;
+		$pk->encode();
+		$len = strlen($pk->buffer) + 1;
 		$MTU = $this->MTU - 24;
+		if($len > $MTU) return $this->blockQueueDataPacket_big($pk);
 		
-		
-		if(($this->blockSendQueueLength + $len) >= $MTU){
+		if(($this->blockUpdateQueueLength + $len+10) >= $MTU){
 			$this->sendBlockUpdateQueue();
 		}
 		
-		$packet->messageIndex = $this->counter[3]++;
-		$packet->reliability = 2;
-		@$this->blockSendQueue->data[] = $packet;
-		$this->blockSendQueueLength += 6 + $len;
+		$pk->messageIndex = $this->counter[3]++;
+		$pk->reliability = RakNetInfo::RELIABILITY_RELIABLE_ORDERED;
+		$pk->orderChannel = Player::BLOCKUPDATE_ORDER_CHANNEL;
+		$pk->orderIndex = $this->blockUpdateQueueOrderIndex++;
+		
+		@$this->blockUpdateQueue->data[] = $pk;
+		$this->blockUpdateQueueLength += 10 + $len;
+		return false;
 	}
 	/**
 	 * @param integer $id
@@ -397,13 +444,17 @@ class Player{
 	
 	
 	public function sendBlockUpdateQueue(){
-		if($this->blockSendQueueLength > 0 and $this->blockSendQueue instanceof RakNetPacket){
-			$this->blockSendQueue->seqNumber = $this->counter[0]++;
-			$this->send($this->blockSendQueue);
+		$lastcntn = false;
+		if($this->blockUpdateQueueLength > 0 and $this->blockUpdateQueue instanceof RakNetPacket){
+			$this->blockUpdateQueue->seqNumber = $lastcntn = $this->counter[0]++;
+			$this->packetAlwaysRecoverQueue[$this->blockUpdateQueue->seqNumber] = $this->blockUpdateQueue;
+			$this->blockUpdateQueue->sendtime = microtime(true);
+			$this->send($this->blockUpdateQueue);
 		}
-		$this->blockSendQueueLength = 0;
-		$this->blockSendQueue = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
-		$this->blockSendQueue->data = [];
+		$this->blockUpdateQueueLength = 0;
+		$this->blockUpdateQueue = new RakNetPacket(RakNetInfo::DATA_PACKET_0);
+		$this->blockUpdateQueue->data = [];
+		return $lastcntn;
 	}
 	public function sendBuffer(){
 		if($this->bufferLen > 0 and $this->buffer instanceof RakNetPacket){
@@ -527,7 +578,7 @@ class Player{
 		if($this->waitBeforeSendingChunks > 0){
 			--$this->waitBeforeSendingChunks;
 		}else{
-			if($this->chunkTicker++ > PocketMinecraftServer::$chukSendDelay){
+			if(++$this->chunkTicker > PocketMinecraftServer::$chukSendDelay){
 				$this->getNextChunk($this->level);
 				$this->chunkTicker = 0;
 			}
@@ -535,17 +586,32 @@ class Player{
 		
 	}
 	
+	public function onChunkReceived($blockX, $blockZ){
+		$chunkX = $blockX >> 4;
+		$chunkZ = $blockZ >> 4;
+		
+		if($chunkX == $this->spawnChunkWaitX && $chunkZ == $this->spawnChunkWaitZ){
+			$this->spawnChunkReceived = true;
+		}
+	}
+	
+	private $lastChunk = false;
 	public function getNextChunk($world){
 		if($this->connected === false or $world != $this->level){
 			return false;
 		}
 		
 		foreach($this->chunkCount as $count => $t){
-			if(isset($this->recoveryQueue[$count]) or isset($this->resendQueue[$count])){
+			if(isset($this->packetAlwaysRecoverQueue[$count])){
 				return;
 			}else{
 				unset($this->chunkCount[$count]);
 			}
+		}
+		
+		if(is_array($this->lastChunk)){
+			$this->onChunkReceived($this->lastChunk[0], $this->lastChunk[1]);
+			$this->lastChunk = false;
 		}
 		
 		$c = key($this->chunksOrder);
@@ -553,10 +619,9 @@ class Player{
 		if($c === null or $d === null) return false;
 		
 		unset($this->chunksOrder[$c]);
-		$this->chunksLoaded[$c] = true;
-		$id = explode(":", $c);
-		$X = $id[0];
-		$Z = $id[1];
+		$xz = explode(":", $c);
+		$X = $xz[0];
+		$Z = $xz[1];
 		$this->level->useChunk($X, $Z, $this);
 		$this->chunksLoaded["$X:$Z"] = true;
 		
@@ -565,11 +630,15 @@ class Player{
 		$pk->chunkZ = $Z;
 		$pk->data = $this->level->getOrderedFullChunk($X, $Z);
 		if($pk->data === false) return false;
-		$cnt = $this->dataPacket($pk);
+		$cnt = $this->blockQueueDataPacket($pk);
+		if($cnt === false){ //sent as smol pk
+			$cnt = [$this->sendBlockUpdateQueue()];
+		}
 		$this->chunkCount = [];
 		foreach($cnt as $i => $count){
 			$this->chunkCount[$count] = true;
 		}
+		$this->lastChunk = [$xz[0] << 4, $xz[1] << 4];
 	}
 
 	/**
@@ -1121,6 +1190,10 @@ class Player{
 		if($this->nextBuffer <= $time and $this->bufferLen > 0){
 			$this->sendBuffer();
 		}
+		
+		if($this->blockUpdateQueueLength > 0){
+			$this->sendBlockUpdateQueue();
+		}
 
 		$limit = $time - 5; //max lag
 		foreach($this->recoveryQueue as $count => $data){
@@ -1130,19 +1203,23 @@ class Player{
 			unset($this->recoveryQueue[$count]);
 			$this->resendQueue[$count] = $data;
 		}
+		
+		foreach($this->packetAlwaysRecoverQueue as $cnt => $data){
+			$maxDelay = (isset($this->chunkCount[$cnt])) ? 2 : 5;
+			if($time - $data->sendtime >= $maxDelay){
+				$this->resendQueue[$cnt] = $data;
+			}
+		}
 
 		if(($resendCnt = count($this->resendQueue)) > 0){
+			$limit = 25;
 			foreach($this->resendQueue as $count => $data){
+				if(!--$limit) break;
 				unset($this->resendQueue[$count]);
 				$this->packetStats[1]++;
 				$this->lag[] = microtime(true) - $data->sendtime;
 				$data->sendtime = microtime(true);
-				$cnt = $this->send($data);
-				if(isset($this->chunkCount[$count])){
-					unset($this->chunkCount[$count]);
-					if(!is_null($cnt) and !is_null($cnt[0]))
-						$this->chunkCount[$cnt[0]] = true;
-				}
+				$this->send($data);
 			}
 		}
 	}
@@ -1252,6 +1329,20 @@ class Player{
 
 		$this->send($pk);
 		return [$pk->seqNumber];
+	}
+	
+	/**
+	 * Used to prevent players with slow internet connection from falling out of the world after teleporting.
+	 * Wont help if you spawn in the void or not receiving movement packets from the server.
+	 * @var boolean
+	 */
+	public $spawnChunkReceived = true;
+	public $spawnChunkWaitX, $spawnChunkWaitZ;
+	
+	public function blockMovementUntilLoaded($x, $z){
+		$this->spawnChunkWaitX = $cX = $x >> 4;
+		$this->spawnChunkWaitZ = $cZ = $z >> 4;
+		$this->spawnChunkReceived = isset($this->chunksLoaded["$cX:$cZ"]);
 	}
 	
 	public function handleDataPacket(RakNetDataPacket $packet){
@@ -1517,7 +1608,6 @@ class Player{
 					return;
 				}
 				if($this->isSleeping) break;
-				
 				//prevent crash caused by nan values
 				if(is_nan($packet->x) || is_nan($packet->y) || is_nan($packet->z)){
 					ConsoleAPI::warn("{$this->username} Attempted to crash the server using NaN position!");
@@ -1538,13 +1628,30 @@ class Player{
 					break;
 				}
 				
+				if(!$this->spawnChunkReceived){
+					$pk = new MovePlayerPacket();
+					$pk->x = $this->entity->x;
+					$pk->y = $this->entity->y + 1.62;
+					$pk->z = $this->entity->z;
+					$pk->yaw = $this->entity->yaw;
+					$pk->pitch = $this->entity->pitch;
+					$pk->bodyYaw = $this->entity->headYaw;
+					$pk->teleport = 1;
+					$this->dataPacket($pk);
+					
+					$pk = new SetEntityMotionPacket();
+					$pk->entities = [[0, 0, 0, 0]];
+					$this->dataPacket($pk);
+					break;
+				}
+				
 				if(($this->entity instanceof Entity) and $packet->messageIndex > $this->lastMovement){
 					$this->lastMovement = $packet->messageIndex;
-					
 					//prevent all movement this far - vanilla collisions break there
 					//farther distances(like inf) may cause client and server crash
 					if(abs($packet->x) >= 8388608 || abs($packet->y) >= 8388608 || abs($packet->z) >= 8388608){
 						$pk = new MovePlayerPacket();
+						$pk->eid = 0;
 						$pk->x = $this->entity->x;
 						$pk->y = $this->entity->y;
 						$pk->z = $this->entity->z;
@@ -1867,7 +1974,9 @@ class Player{
 				}
 				$this->craftingItems = [];
 				$this->toCraft = [];
+				
 				$this->teleport($this->spawnPosition);
+				
 				if($this->entity instanceof Entity){
 					$this->entity->fire = 0;
 					$this->entity->air = 300;
@@ -2375,14 +2484,19 @@ class Player{
 
 	public function handlePacket(RakNetPacket $packet){
 		if($this->connected === true){
-			$this->timeout = microtime(true) + 20;
+			$time = microtime(true);
+			$this->timeout = $time + 20;
 			switch($packet->pid()){
 				case RakNetInfo::NACK:
 					foreach($packet->packets as $count){
-						if(isset($this->recoveryQueue[$count])){
+						if(isset($this->packetAlwaysRecoverQueue[$count])){
+							$this->resendQueue[$count] = $this->packetAlwaysRecoverQueue[$count];
+						}else if(isset($this->recoveryQueue[$count])){
 							$this->resendQueue[$count] =& $this->recoveryQueue[$count];
-							$this->lag[] = microtime(true) - $this->recoveryQueue[$count]->sendtime;
+							$this->lag[] = $time - $this->recoveryQueue[$count]->sendtime;
 							unset($this->recoveryQueue[$count]);
+						}else{ //lost and wont be recovered
+							++$this->packetStats[1];
 						}
 						++$this->packetStats[1];
 					}
@@ -2390,7 +2504,12 @@ class Player{
 
 				case RakNetInfo::ACK:
 					foreach($packet->packets as $count){
-						if(isset($this->recoveryQueue[$count])){
+						if(isset($this->packetAlwaysRecoverQueue[$count])){
+							$this->lag[] = $time - $this->packetAlwaysRecoverQueue[$count]->sendtime;
+							
+							unset($this->packetAlwaysRecoverQueue[$count]);
+							unset($this->chunkCount[$count]);
+						}else if(isset($this->recoveryQueue[$count])){
 							$this->lag[] = microtime(true) - $this->recoveryQueue[$count]->sendtime;
 							unset($this->recoveryQueue[$count]);
 							unset($this->resendQueue[$count]);

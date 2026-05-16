@@ -20,7 +20,7 @@ class Level{
 	public $entityList;
 	public $tiles, $blockUpdates, $nextSave, $players = [], $level, $mobSpawner;
 	public $time, $startCheck, $startTime, $server, $name, $usedChunks, $changedBlocks, $changedCount, $stopTime;
-	public $resendBlocksToPlayers = [];
+	public $queuedBlockUpdates = [];
 	public $generator;
 	public function __construct(PMFLevel $level, Config $entities, Config $tiles, Config $blockUpdates, $name){
 		$this->server = ServerAPI::request();
@@ -96,9 +96,7 @@ class Level{
 	}
 	
 	public function sendBlockToAll($x, $y, $z){
-		foreach($this->players as $p){
-			$this->resendBlocksToPlayers[$p->CID]["$x.$y.$z"] = true;
-		}
+		$this->queuedBlockUpdates["$x.$y.$z"] = [$x, $y, $z];
 	}
 	
 	public function __destruct(){
@@ -137,13 +135,7 @@ class Level{
 	
 	public function fastSetBlockUpdateMeta($x, $y, $z, $meta, $updateBlock = false){
 		$this->level->setBlockDamage($x, $y, $z, $meta);
-		$pk = new UpdateBlockPacket;
-		$pk->x = $x;
-		$pk->y = $y;
-		$pk->z = $z;
-		$pk->block = $this->level->getBlockID($x, $y, $z);
-		$pk->meta = $meta;
-		$this->server->api->player->broadcastPacket($this->players, $pk);
+		$this->sendBlockToAll($x, $y, $z);
 		if($updateBlock){
 			$this->server->api->block->blockUpdateAround(new Position($x, $y, $z, $this), BLOCK_UPDATE_NORMAL, 1);
 		}
@@ -371,12 +363,14 @@ class Level{
 				foreach($this->changedBlocks as $blocks){
 					foreach($blocks as $b){
 						$pk = new UpdateBlockPacket;
-						$pk->x = $b->x;
-						$pk->y = $b->y;
-						$pk->z = $b->z;
-						$pk->block = $b->getID();
-						$pk->meta = $b->getMetadata();
-						$this->server->api->player->broadcastPacket($this->players, $pk);
+						$pk->x = $b[0];
+						$pk->y = $b[1];
+						$pk->z = $b[2];
+						$pk->block = $b[3];
+						$pk->meta = $b[4];
+						foreach($this->players as $p){
+							$p->blockQueueDataPacket($pk);
+						}
 					}
 				}
 				$this->changedBlocks = [];
@@ -402,13 +396,7 @@ class Level{
 	public function setBlockRaw(Vector3 $pos, Block $block, $direct = true, $send = true){
 		if(($ret = $this->level->setBlock($pos->x, $pos->y, $pos->z, $block->getID(), $block->getMetadata())) === true and $send !== false){
 			if($direct === true){
-				$pk = new UpdateBlockPacket;
-				$pk->x = $pos->x;
-				$pk->y = $pos->y;
-				$pk->z = $pos->z;
-				$pk->block = $block->getID();
-				$pk->meta = $block->getMetadata();
-				$this->server->api->player->broadcastPacket($this->players, $pk);
+				$this->sendBlockToAll($pos->x, $pos->y, $pos->z);
 			}elseif($direct === false){
 				if(!($pos instanceof Position)){
 					$pos = new Position($pos->x, $pos->y, $pos->z, $this);
@@ -420,7 +408,7 @@ class Level{
 					$this->changedBlocks[$i] = [];
 					$this->changedCount[$i] = 0;
 				}
-				$this->changedBlocks[$i][] = clone $block;
+				$this->changedBlocks[$i][] = [$block->x, $block->y, $block->z, $block->getID(), $block->meta];
 				++$this->changedCount[$i];
 			}
 		}
@@ -474,33 +462,25 @@ class Level{
 			$this->level->unloadChunk($xz[0], $xz[1]);
 			unset($this->level->fakeLoaded[$ind]);
 		}
-		foreach($this->resendBlocksToPlayers as $playerCID => $blockz){
-			/**
-			 * @var Player $player
-			 */
-			$player = $this->server->clients[$playerCID] ?? false;
-			if($player instanceof Player){
-				foreach($blockz as $xyz => $_){
-					$xyzz = explode(".", $xyz);
-					if(count($xyzz) == 3){
-						$x = (int) $xyzz[0];
-						$y = (int) $xyzz[1];
-						$z = (int) $xyzz[2];
-						$idm = $this->level->getBlock($x, $y, $z);
-						//$player->addToBlockSendQueue(new UpdateBlockPacket($x, $y, $z, $idm[0], $idm[1]));
-						$pk = new UpdateBlockPacket;
-						$pk->x = $x;
-						$pk->y = $y;
-						$pk->z = $z;
-						$pk->block = $idm[0] & 0xff;
-						$pk->meta = $idm[1] & 0xff;
-						$player->addToBlockSendQueue($pk);
-					}
-					unset($blockz[$xyz]);
-				}
-				$player->sendBlockUpdateQueue();
+		foreach($this->queuedBlockUpdates as $ind => $xyz){
+			foreach($this->players as $p){
+				$x = (int) $xyz[0];
+				$z = (int) $xyz[2];
+				$X = $x >> 4;
+				$Z = $z >> 4;
+				if(!isset($p->chunksLoaded["$X:$Z"])) continue; //dont send block updates for non-loaded chunks
+				$y = (int) $xyz[1];
+				
+				$idm = $this->level->getBlock($x, $y, $z);
+				$pk = new UpdateBlockPacket;
+				$pk->x = $x;
+				$pk->y = $y;
+				$pk->z = $z;
+				$pk->block = $idm[0];
+				$pk->meta = $idm[1];
+				$p->blockQueueDataPacket($pk);
 			}
-			unset($this->resendBlocksToPlayers[$playerCID]);
+			unset($this->queuedBlockUpdates[$ind]);
 		}
 	}
 	
@@ -526,7 +506,7 @@ class Level{
 					$this->changedCount[$i] = 0;
 				}
 				
-				$this->changedBlocks[$i][] = clone $block;
+				$this->changedBlocks[$i][] = [$block->x, $block->y, $block->z, $block->getID(), $block->meta];
 				++$this->changedCount[$i];
 			}
 
