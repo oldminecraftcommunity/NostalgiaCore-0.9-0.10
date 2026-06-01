@@ -505,7 +505,7 @@ class Level{
 					$this->changedCount[$i] = 0;
 				}
 				
-				$this->changedBlocks[$i][] = [$block->x, $block->y, $block->z, $block->getID(), $block->meta];
+				$this->changedBlocks[$i][] = [$block->x, $block->y, $block->z, $block->getID(), $block->getMetadata()];
 				++$this->changedCount[$i];
 			}
 

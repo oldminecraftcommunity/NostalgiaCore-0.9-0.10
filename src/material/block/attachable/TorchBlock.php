@@ -21,7 +21,7 @@ class TorchBlock extends FlowableBlock implements LightingBlock{
 					0 => 0,
 			);
 
-			if($this->getSide($faces[$side])->isTransparent === true and !($side === 0 and $this->getSide(0)->getID() === FENCE)){ //Replace with common break method
+			if($this->getSide($faces[$side])->isTransparent === true and !($side === 0 and ($this->getSide(0)->getID() === FENCE || $this->getSide(0)->getID() === STONE_WALL))){ //Replace with common break method
 				ServerAPI::request()->api->entity->drop($this, BlockAPI::getItem($this->id, 0, 1));
 				$this->level->setBlock($this, new AirBlock(), true, false, true);
 				return BLOCK_UPDATE_NORMAL;
@@ -42,7 +42,7 @@ class TorchBlock extends FlowableBlock implements LightingBlock{
 			$this->meta = $faces[$face];
 			$this->level->setBlock($block, $this, true, false, true);
 			return true;
-		}elseif($this->getSide(0)->isTransparent === false or $this->getSide(0)->getID() === FENCE or $this->getSide(0)->getID() === STONE_WALL){
+		}elseif($this->getSide(0)->isTransparent === false || $this->getSide(0)->getID() === FENCE || $this->getSide(0)->getID() === STONE_WALL){
 			$this->meta = 0;
 			$this->level->setBlock($block, $this, true, false, true);
 			return true;
