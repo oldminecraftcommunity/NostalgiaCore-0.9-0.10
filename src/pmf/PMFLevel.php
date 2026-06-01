@@ -782,7 +782,7 @@ class PMFLevel extends PMF{
 			$new_m = ($old_m & 0xf) | ($damage << 4);
 			$old_m >>= 4;
 		}else {
-			$new_m = ($old_m << 4) | ($damage);
+			$new_m = ($old_m & 0xf0) | ($damage);
 			$old_m &= 0xf;
 		}
 		
@@ -853,7 +853,7 @@ class PMFLevel extends PMF{
 			$old_m >>= 4;
 		}
 		else {
-			$new_m = ($old_m << 4) | $meta;
+			$new_m = ($old_m & 0xf0) | $meta;
 			$old_m &= 0xf;
 		}
 		

@@ -20,8 +20,8 @@ class DoorBlock extends TransparentBlock{
 		if($type === BLOCK_UPDATE_NORMAL){
 			if($this->getSide(0)->getID() === AIR){ //Replace with common break method
 				$this->level->setBlock($this, new AirBlock(), false);
-			  		if($this->getID() == 64) ServerAPI::request()->api->entity->drop(new Position($this->x+0.5, $this->y, $this->z+0.5, $this->level), BlockAPI::getItem(324, 0, 1));
-			  		elseif($this->getID() == 71) ServerAPI::request()->api->entity->drop(new Position($this->x+0.5, $this->y, $this->z+0.5, $this->level), BlockAPI::getItem(330, 0, 1));
+			  		if($this->getID() == WOODEN_DOOR_BLOCK) ServerAPI::request()->api->entity->drop(new Position($this->x+0.5, $this->y, $this->z+0.5, $this->level), BlockAPI::getItem(WOODEN_DOOR, 0, 1));
+			  		elseif($this->getID() == IRON_DOOR_BLOCK) ServerAPI::request()->api->entity->drop(new Position($this->x+0.5, $this->y, $this->z+0.5, $this->level), BlockAPI::getItem(IRON_DOOR, 0, 1));
 				if($this->getSide(1) instanceof DoorBlock){
 					$this->level->setBlock($this->getSide(1), new AirBlock(), false);
 				}
@@ -68,7 +68,7 @@ class DoorBlock extends TransparentBlock{
 			
 			$this->meta = $direction & 0x03;
 			$this->level->setBlock($block, $this, true, false, true); //Bottom
-			return true;			
+			return true;
 		}
 		return false;
 	}
