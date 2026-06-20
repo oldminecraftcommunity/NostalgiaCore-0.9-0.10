@@ -77,6 +77,7 @@ class Entity extends Position
 	public $carryoverDamage;
 	public $gravity;
 	public $delayBeforePickup;
+	public $yOffset = 0;
 	
 	function __construct(Level $level, $eid, $class, $type = 0, $data = array())
 	{
@@ -156,6 +157,7 @@ class Entity extends Position
 				$this->hasGravity = true;
 				$this->setHealth(5, "generic");
 				$this->setSize(0.25, 0.25);
+				$this->yOffset = $this->height / 2;
 				$this->delayBeforePickup = 40; //in vanilla it is 0 by default
 				break;
 			case ENTITY_FALLING:
@@ -426,14 +428,14 @@ class Entity extends Position
 		if(!($this instanceof Painting) && !($this->isPlayer() && $this->player->isSleeping !== false)){
 			for($i = 0; $i < 8; ++$i){
 				$x = ((($i >> 0) % 2) - 0.5) * $this->width * 0.8;
-				$y= ((($i >> 1) % 2) - 0.5) * 0.1;
+				$y = ((($i >> 1) % 2) - 0.5) * 0.1;
 				$z = ((($i >> 2) % 2) - 0.5) * $this->width * 0.8;
 				
 				$blockX = floor($this->x + $x);
 				$blockY = floor($this->y + $this->getEyeHeight() + $y);
 				$blockZ = floor($this->z + $z);
-			
-				if(StaticBlock::getIsSolid($this->level->level->getBlockID($blockX, $blockY, $blockZ))){
+				$bid = $this->level->level->getBlockID($blockX, $blockY, $blockZ);
+				if(StaticBlock::getIsSolid($bid)){
 					$this->harm(1, "suffocation"); // Suffocation
 					$hasUpdate = true;
 					break;
@@ -651,11 +653,11 @@ class Entity extends Position
 					$ny = $this->y + $this->speedY;
 					if($this->class === ENTITY_FALLING){
 						if($support){
-							$this->level->fastSetBlockUpdate($this->x, $this->y, $this->z, $this->data["Tile"], 0);
+							$this->level->fastSetBlockUpdate(floor($this->x), floor($this->y), floor($this->z), $this->data["Tile"], 0);
 							$this->close();
 							return;
 						}
-						$id = $this->level->level->getBlockID($this->x, $this->y, $this->z);
+						$id = $this->level->level->getBlockID(floor($this->x), floor($this->y), floor($this->z));
 						if($id > 0 && !StaticBlock::getIsSolid($id) && !StaticBlock::getIsLiquid($id)){
 							$this->server->api->entity->drop($this, BlockAPI::getItem($this->data["Tile"], 0, 1));
 							$this->close();
@@ -790,7 +792,7 @@ class Entity extends Position
 					} else{
 						
 						$pk = new MoveEntityPacket;
-						$pk->entities = [[$this->eid, $this->x, $this->y, $this->z, $this->yaw, $this->pitch]];
+						$pk->entities = [[$this->eid, $this->x, $this->y + $this->yOffset, $this->z, $this->yaw, $this->pitch]];
 						$this->server->api->player->broadcastPacket($players, $pk);
 					}
 				}
@@ -1313,7 +1315,7 @@ class Entity extends Position
 			return;
 		}
 		$pk = new MoveEntityPacket();
-		$pk->entities = [[$this->eid, $this->x, $this->y, $this->z, $this->yaw, $this->pitch]];
+		$pk->entities = [[$this->eid, $this->x, $this->y + $this->yOffset, $this->z, $this->yaw, $this->pitch]];
 		$this->server->api->player->broadcastPacket($this->level->players, $pk);
 	}
 

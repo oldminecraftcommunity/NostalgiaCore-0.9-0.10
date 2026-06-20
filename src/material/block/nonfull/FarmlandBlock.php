@@ -4,6 +4,7 @@ class FarmlandBlock extends TransparentBlock{
 	public function __construct($meta = 0){
 		parent::__construct(FARMLAND, $meta, "Farmland");
 		$this->hardness = 3;
+		$this->boundingBox = new AxisAlignedBB($this->x, $this->y, $this->z, $this->x + 1, $this->y + 1, $this->z + 1);
 	}
 
 	public function getDrops(Item $item, Player $player){
