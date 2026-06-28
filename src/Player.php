@@ -569,6 +569,18 @@ class Player{
 	
 	public $chunkTicker = 0, $waitBeforeSendingChunks = 0;
 	public function entityTick(){
+		foreach($this->requestedBlockUpdates as $ind => $xyz){
+			[$id, $meta] = $this->level->level->getBlock($xyz[0], $xyz[1], $xyz[2]);
+			$pk = new UpdateBlockPacket;
+			$pk->x = $xyz[0];
+			$pk->y = $xyz[1];
+			$pk->z = $xyz[2];
+			$pk->block = $id;
+			$pk->meta = $meta;
+			$this->blockQueueDataPacket($pk);
+		}
+		$this->requestedBlockUpdates = [];
+		
 		//ConsoleAPI::debug("{$this->username}, cl: ".count($this->chunksLoaded).", oc: ".count($this->chunksOrder));
 		if(count($this->chunksOrder) <= 0 && $this->level->generatorType != 0){
 			$this->orderChunks();
@@ -1338,7 +1350,7 @@ class Player{
 	 */
 	public $spawnChunkReceived = true;
 	public $spawnChunkWaitX, $spawnChunkWaitZ;
-	
+	public $requestedBlockUpdates = [];
 	public function blockMovementUntilLoaded($x, $z){
 		$this->spawnChunkWaitX = $cX = $x >> 4;
 		$this->spawnChunkWaitZ = $cZ = $z >> 4;
@@ -1752,14 +1764,8 @@ class Player{
 			case ProtocolInfo::REQUEST_CHUNK_PACKET:
 				break;
 			case ProtocolInfo::UPDATE_BLOCK_PACKET:
-				$idm = $this->level->level->getBlock($packet->x, $packet->y, $packet->z);
-				$pk = new UpdateBlockPacket;
-				$pk->x = $packet->x;
-				$pk->y = $packet->y;
-				$pk->z = $packet->z;
-				$pk->block = $idm[0];
-				$pk->meta = $idm[1];
-				$this->blockQueueDataPacket($pk);
+				$this->requestedBlockUpdates["{$packet->x}.{$packet->y}.{$packet->z}"] = [$packet->x, $packet->y, $packet->z];
+
 				break;
 			case ProtocolInfo::USE_ITEM_PACKET:
 				if(!($this->entity instanceof Entity)){
