@@ -153,12 +153,12 @@ abstract class Block extends Position{
 		LILY_PAD => "LilypadBlock",
 		DOUBLE_PLANT => "DoubleTallGrass",
 	);
-	protected $id;
-	protected $meta;
-	protected $name;
-	protected $breakTime;
+	public $id;
+	public $meta;
+	public $name;
+	public $breakTime;
 	public $boundingBox;
-	protected $hardness;
+	public $hardness;
 	public $isActivable = false;
 	public $breakable = true;
 	public $isFlowable = false;

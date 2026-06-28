@@ -4,9 +4,9 @@ class Painting extends Hanging{
 	const TYPE = OBJECT_PAINTING;
 	public function __construct(Level $level, $eid, $class, $type = 0, $data = []){
 		parent::__construct($level, $eid, $class, $type, $data);
-		$this->x = isset($this->data["TileX"]) ? $this->data["TileX"]:$this->x;
-		$this->y = isset($this->data["TileY"]) ? $this->data["TileY"]:$this->y;
-		$this->z = isset($this->data["TileZ"]) ? $this->data["TileZ"]:$this->z;
+		$this->x = isset($this->data["TileX"]) ? (float)$this->data["TileX"]:$this->x;
+		$this->y = isset($this->data["TileY"]) ? (float)$this->data["TileY"]:$this->y;
+		$this->z = isset($this->data["TileZ"]) ? (float)$this->data["TileZ"]:$this->z;
 		$this->setHealth(1, "generic");
 		$this->canBeAttacked = true;
 		$this->width = 1;

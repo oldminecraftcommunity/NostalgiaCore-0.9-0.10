@@ -138,7 +138,7 @@ class ServerAPI{
 			"enable-rcon" => false,
 			"rcon.password" => substr(base64_encode(Utils::getRandomBytes(20, false)), 3, 10),
 			"auto-save" => true,
-			"chunk-send-delay-ticks" => PocketMinecraftServer::$chukSendDelay,
+			//"chunk-send-delay-ticks" => PocketMinecraftServer::$chukSendDelay,
 			"chunk-loading-radius" => PocketMinecraftServer::$chunkLoadingRadius,
 			"abort-reading-after-N-packets" => PocketMinecraftServer::$PACKET_READING_LIMIT,
 			"add-0.10-features" => PocketMinecraftServer::$is0105,
@@ -163,7 +163,7 @@ class ServerAPI{
 		//define("MAX_CHUNK_RATE", 20 / $this->getProperty("max-chunks-per-second", 8)); //Default rate ~512 kB/s
 		MobSpawner::$spawnAnimals = $this->getProperty("spawn-animals");
 		MobSpawner::$spawnMobs = $this->getProperty("spawn-mobs");
-		PocketMinecraftServer::$chukSendDelay = $this->getProperty("chunk-send-delay-ticks");
+		//PocketMinecraftServer::$chukSendDelay = $this->getProperty("chunk-send-delay-ticks");
 		PocketMinecraftServer::$chunkLoadingRadius = $this->getProperty("chunk-loading-radius");
 		
 		if(PocketMinecraftServer::$chunkLoadingRadius < 4){

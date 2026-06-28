@@ -304,7 +304,7 @@ class Utils{
 	}
 
 	public static function readShort($str, $signed = true){
-		if(strlen($str) === 0){
+		if(strlen($str) < 2){
 			return;
 		}
 
@@ -422,7 +422,7 @@ class Utils{
 	}
 	
 	public static function readTriad($str){
-		return @unpack("N", "\x00" . $str)[1];
+		return strlen($str) < 3 ? 0 : @unpack("N", "\x00$str")[1]; //make sure this returns 0 on failure instead of false or else raknet parser will fall into infinite loop if start is false
 	}
 
 	public static function writeDataArray($data){
@@ -553,20 +553,17 @@ class Utils{
 	}
 
 	public static function readBool($b){
-		return Utils::readByte($b, false) === 0 ? false : true;
+		return Utils::readByte($b, false) != 0;
 	}
 
 	public static function writeBool($b){
-		return Utils::writeByte($b === true ? 1 : 0);
+		return Utils::writeByte($b ? 1 : 0);
 	}
-
+	
 	public static function readInt($str){
-		if(strlen($str) <= 0) return; 
-		if(PHP_INT_SIZE === 8){
-			return @unpack("N", $str)[1] << 32 >> 32;
-		}else{
-			return @unpack("N", $str)[1];
-		}
+		if(strlen($str) < 4) return 0;
+		
+		return @unpack("N", $str)[1] << 32 >> 32; //php has no signed long unpack
 	}
 
 	public static function writeInt($value){
@@ -577,12 +574,13 @@ class Utils{
 	}
 
 	public static function readFloat($str){
-		list(, $value) = ENDIANNESS === BIG_ENDIAN ? @unpack("f", $str) : @unpack("f", strrev($str));
+		if(strlen($str) < 4) return 0;
+		list(, $value) = @unpack("G", $str);
 		return $value;
 	}
-
+	
 	public static function writeFloat($value){
-		return ENDIANNESS === BIG_ENDIAN ? pack("f", $value) : strrev(pack("f", $value));
+		return pack("G", $value);
 	}
 
 	public static function printFloat($value){
@@ -590,73 +588,39 @@ class Utils{
 	}
 
 	public static function readDouble($str){
-		list(, $value) = ENDIANNESS === BIG_ENDIAN ? @unpack("d", $str) : @unpack("d", strrev($str));
+		list(, $value) = @unpack("E", $str);
 		return $value;
 	}
 
 	public static function writeDouble($value){
-		return ENDIANNESS === BIG_ENDIAN ? pack("d", $value) : strrev(pack("d", $value));
+		return pack("E", $value);
 	}
 
 	public static function readLDouble($str){
-		list(, $value) = ENDIANNESS === BIG_ENDIAN ? @unpack("d", strrev($str)) : @unpack("d", $str);
+		if(strlen($str) < 8) return 0;
+		list(, $value) = @unpack("e", $str);
 		return $value;
 	}
 
 	public static function writeLDouble($value){
-		return ENDIANNESS === BIG_ENDIAN ? strrev(pack("d", $value)) : pack("d", $value);
+		return pack("e", $value);
 	}
 
 	public static function readLLong($str){
-		return Utils::readLong(strrev($str));
+		if(strlen($str) < 8) return 0;
+		return unpack("P", $str)[1];
 	}
 
 	public static function readLong($x, $signed = true){
-		$value = "0";
-		if($signed === true){
-			$negative = ((ord($x[0]) & 0x80) === 0x80) ? true : false;
-			if($negative){
-				$x = ~$x;
-			}
-		}else{
-			$negative = false;
-		}
-
-		for($i = 0; $i < 8; $i += 4){
-			$value = bcmul($value, "4294967296", 0); //4294967296 == 2^32
-			$value = bcadd($value, 0x1000000 * ord(@$x[$i]) + ((ord(@$x[$i + 1]) << 16) | (ord(@$x[$i + 2]) << 8) | ord(@$x[$i + 3])), 0);
-		}
-		return ($negative === true ? "-" . $value : $value);
+		return strlen($x) < 8 ? 0 : @unpack("J", $x)[1];
 	}
 
 	public static function writeLLong($value){
-		return strrev(Utils::writeLong($value));
+		return pack("P", $value);
 	}
-
+	
 	public static function writeLong($value){
-		$x = "";
-		$value = (string) $value;
-		if(!is_float($value)){
-			if(strval($value[0] == null ? '' : $value[0]) === "-"){
-				$negative = true;
-				$value = bcadd($value, "1");
-				if(strval($value[0]) === "-"){
-					$value = substr($value, 1);
-				}
-			}else{
-				$negative = false;
-			}
-			while(bccomp($value, "0", 0) > 0){
-				$temp = bcmod($value, "16777216");
-				$x = chr($temp >> 16) . chr($temp >> 8) . chr($temp) . $x;
-				$value = bcdiv($value, "16777216", 0);
-			}
-			$x = str_pad(substr($x, 0, 8), 8, "\x00", STR_PAD_LEFT);
-			if($negative === true){
-				$x = ~$x;
-			}
-			return $x;
-		}
+		return pack("J", $value);
 	}
 }
 
