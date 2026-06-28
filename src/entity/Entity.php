@@ -1416,22 +1416,27 @@ class Entity extends Position
 		$this->fallStart = false;
 		$this->updateMetadata();
 		$this->dead = true;
-		if($this->player instanceof Player){
-			$pk = new MoveEntityPacket_PosRot();
+		
+		$plz = $this->level->players;
+		if($this->isPlayer()){ //TODO better fix: vanilla seems to achieve this by changing hitbox size and pplying physics
+			$pk = new MovePlayerPacket();
 			$pk->eid = $this->eid;
-			$pk->x = - 256;
-			$pk->y = 128;
-			$pk->z = - 256;
-			$pk->yaw = 0;
-			$pk->pitch = 0;
-			$this->server->api->player->broadcastPacket($this->level->players, $pk);
-		}else{
-			$pk = new EntityEventPacket;
-			$pk->eid = $this->eid;
-			$pk->event = EntityEventPacket::ENTITY_DEAD;
-			$this->server->api->player->broadcastPacket($this->level->players, $pk);
+			$pk->x = $this->x;
+			$pk->y = $this->y - 1.62;
+			$pk->z = $this->z;
+			$pk->yaw = $this->yaw;
+			$pk->pitch = $this->pitch;
+			$pk->bodyYaw = $this->yaw;
+			$pk->teleport = false;
+			unset($plz[$this->player->CID]);
+			$this->server->api->player->broadcastPacket($plz, $pk);
 		}
-		if($this->player instanceof Player){
+		$pk = new EntityEventPacket;
+		$pk->eid = $this->eid;
+		$pk->event = EntityEventPacket::ENTITY_DEAD;
+		$this->server->api->player->broadcastPacket($plz, $pk);
+		
+		if($this->isPlayer()){
 			$this->player->blocked = true;
 			$this->server->api->dhandle("player.death", [
 				"player" => $this->player,

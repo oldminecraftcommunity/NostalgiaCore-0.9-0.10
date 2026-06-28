@@ -1752,7 +1752,14 @@ class Player{
 			case ProtocolInfo::REQUEST_CHUNK_PACKET:
 				break;
 			case ProtocolInfo::UPDATE_BLOCK_PACKET:
-				$this->level->resendBlocksToPlayers[$this->CID]["{$packet->x}.{$packet->y}.{$packet->z}"] = true;
+				$idm = $this->level->level->getBlock($packet->x, $packet->y, $packet->z);
+				$pk = new UpdateBlockPacket;
+				$pk->x = $packet->x;
+				$pk->y = $packet->y;
+				$pk->z = $packet->z;
+				$pk->block = $idm[0];
+				$pk->meta = $idm[1];
+				$this->blockQueueDataPacket($pk);
 				break;
 			case ProtocolInfo::USE_ITEM_PACKET:
 				if(!($this->entity instanceof Entity)){
@@ -1976,7 +1983,14 @@ class Player{
 				$this->toCraft = [];
 				
 				$this->teleport($this->spawnPosition);
-				
+				$pk = new RespawnPacket();
+				$pk->eid = $this->entity->eid;
+				$pk->x = $this->spawnPosition->x;
+				$pk->y = $this->spawnPosition->y;
+				$pk->z = $this->spawnPosition->z;
+				foreach($this->level->players as $p){
+					if($p != $this) $p->dataPacket(clone $pk);
+				}
 				if($this->entity instanceof Entity){
 					$this->entity->fire = 0;
 					$this->entity->air = 300;
