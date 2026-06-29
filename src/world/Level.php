@@ -491,7 +491,7 @@ class Level{
 		$avgZ = ($minZ + $maxZ) / 2;
 		
 		if($this->level->isChunkLoaded($avgX >> 4, $avgZ >> 4)){
-			if($resize){
+			if(!$this->instantLightUpdates && $resize){
 				$max = 5;
 				$sz = $this->lightUpdatesIndx;
 				if($sz < $max) $max = $sz;

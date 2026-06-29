@@ -99,7 +99,8 @@ class SuperflatGenerator implements LevelGenerator{
 
 	public function init(Level $level, IRandom $random){
 		$this->level = $level;
-		$this->random = $random;
+		$this->random = new XorShift128Random($level->getSeed()); //$random;
+		$this->random->setSeed($this->level->getSeed());
 	}
 
 	public function generateChunk($chunkX, $chunkZ){

@@ -578,6 +578,7 @@ class PMFLevel extends PMF{
 	public function recalcHeightmap($X, $Z){
 		$index = PMFLevel::getIndex($X, $Z);
 		$blocks = &$this->blockIds[$index];
+		$skylight = &$this->skyLight[$index];
 		$heightmap = &$this->heightmap[$index];
 		$topblock = 127;
 		
@@ -596,8 +597,14 @@ class PMFLevel extends PMF{
 				$lightLevel = 15;
 				$yLight = 127;
 				do{
-					$lightLevel -= StaticBlock::$lightBlock[ord($blocks[$xzIndex|$yLight])];
-					if($lightLevel > 0) $this->setBrightness(LIGHTLAYER_SKY, $X*16 + $x, $yLight, $Z*16 + $z, $lightLevel);
+					$xyzIndex = $xzIndex|$yLight;
+					$lightLevel -= StaticBlock::$lightBlock[ord($blocks[$xyzIndex])];
+					if($lightLevel > 0){
+						$old_m = ord($skylight[$xyzIndex >> 1]);
+						$new_m = $xyzIndex & 1 ? (($old_m & 0x0f) | ($lightLevel << 4)) : (($old_m & 0xf0) | ($lightLevel));
+						$skylight[$xyzIndex >> 1] = chr($new_m);
+						//$this->setBrightness(LIGHTLAYER_SKY, $X*16 + $x, $yLight, $Z*16 + $z, $lightLevel);
+					}
 				}while(--$yLight > 0 && $lightLevel > 0);
 			}
 		}
@@ -650,10 +657,10 @@ class PMFLevel extends PMF{
 		$cx = $x & 0xf;
 		$cz = $z & 0xf;
 		$bindex = ($cx << 11) | ($cz << 7) | $y;
+		if($layer == LIGHTLAYER_BLOCK) $arr = &$this->blockLight[$index];
+		else $arr = &$this->skyLight[$index];
 		
-		if($layer == LIGHTLAYER_BLOCK) $old_m = ord($this->blockLight[$index][$bindex >> 1]);
-		else $old_m = ord($this->skyLight[$index][$bindex >> 1]);
-		$new_m = 0;
+		$old_m = ord($arr[$bindex >> 1]);
 		
 		if($bindex & 1){
 			$new_m = ($old_m & 0x0f) | ($value << 4);
@@ -664,9 +671,7 @@ class PMFLevel extends PMF{
 		}
 		
 		if($old_m != $value){
-			if($layer == LIGHTLAYER_BLOCK) $this->blockLight[$index][$bindex >> 1] = chr($new_m);
-			else $this->skyLight[$index][$bindex >> 1] = chr($new_m);
-			
+			$arr[$bindex >> 1] = chr($new_m);
 			$this->chunkChange[$index] = true;
 			return true;
 		}

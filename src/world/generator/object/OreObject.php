@@ -56,7 +56,7 @@ class OreObject{
 						$sizeY = ($y + 0.5 - $seedY) / $size;
 						$sizeY *= $sizeY;
 						$sizeXpY = $sizeX + $sizeY;
-						if($y > 0 and $sizeXpY < 1){
+						if($y > 0 && $sizeXpY < 1){
 							for($z = $startZ; $z <= $endZ; ++$z){
 								$sizeZ = ($z + 0.5 - $seedZ) / $size;
 								$sizeZ *= $sizeZ;
