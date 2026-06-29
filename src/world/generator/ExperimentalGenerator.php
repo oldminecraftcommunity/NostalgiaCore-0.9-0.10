@@ -159,6 +159,7 @@ class ExperimentalGenerator implements NewLevelGenerator{
 		}
 		
 		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas);
+		$this->level->level->recalcHeightmap($chunkX, $chunkZ);
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){

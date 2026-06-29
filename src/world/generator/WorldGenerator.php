@@ -32,10 +32,10 @@ class WorldGenerator{
 	public function generate(){
 		$this->generator->init($this->level, $this->random);
 		$this->level->instantLightUpdates = true;
+		console("[NOTICE] Starting level generation and population");
 		for($Z = 0; $Z < $this->width; ++$Z){
 			for($X = 0; $X < $this->width; ++$X){
-				$this->generator->generateChunk($X, $Z);
-				$this->generator->populateChunk($X, $Z);
+				$this->level->level->generateChunk($X, $Z, $this->generator);
 			}
 			console("[NOTICE] Generating and populating level " . ceil((($Z + 1) / $this->width) * 100) . "%");
 		}

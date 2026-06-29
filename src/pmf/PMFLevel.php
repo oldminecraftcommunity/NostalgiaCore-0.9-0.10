@@ -78,13 +78,6 @@ class PMFLevel extends PMF{
 			@mkdir($dirname , 0755);
 		}
 		
-		for($X = 0; $X < 16; ++$X){
-			for($Z = 0; $Z < 16; ++$Z){
-				$this->initCleanChunk($X, $Z);
-				
-				@file_put_contents($this->getChunkPath($X, $Z), gzdeflate("", PMF_LEVEL_DEFLATE_LEVEL));
-			}
-		}
 		if(!file_exists(dirname($this->file) . "/entities.yml")){
 			$entities = new Config(dirname($this->file) . "/entities.yml", CONFIG_YAML);
 			$entities->save();
@@ -623,8 +616,8 @@ class PMFLevel extends PMF{
 		$y = (int) $y;
 		$z = (int) $z;
 		
-		if($y > 127 || $y < 0) return $layer;
-		
+		if($y > 127 || $y < 0) return $layer;		
+
 		$X = $x >> 4;
 		$Z = $z >> 4;
 		$index = $this->getIndex($X, $Z);
@@ -760,6 +753,13 @@ class PMFLevel extends PMF{
 	public function generateChunk($X, $Z, LevelGenerator $generator){
 		$index = $this->getIndex($X, $Z);
 		if(isset($this->blockIds[$index])){
+			if(!$this->isChunkPopulated($X, $Z)){
+				$prev = $this->level->instantLightUpdates;
+				$this->level->instantLightUpdates = true;
+				$generator->populateChunk($X, $Z);
+				$this->level->instantLightUpdates = $prev;
+				return true;
+			}
 			return false;
 		}
 		$this->initCleanChunk($X, $Z);
@@ -768,6 +768,7 @@ class PMFLevel extends PMF{
 		$generator->generateChunk($X, $Z);
 		$generator->populateChunk($X, $Z);
 		$this->level->instantLightUpdates = $prev;
+		return true;
 	}
 
 	

@@ -8,7 +8,6 @@ class NormalGenerator implements NewLevelGenerator{
 	private $populators = array();
 	private $level;
 	private $random;
-	public $mtrandom;
 	private $worldHeight = 65;
 	private $waterHeight = 63;
 	private $noiseHills;
@@ -30,7 +29,6 @@ class NormalGenerator implements NewLevelGenerator{
 		$this->level = $level;
 		$this->random = new XorShift128Random($level->getSeed()); //$random;
 		$this->random->setSeed($this->level->getSeed());
-		$this->mtrandom = new MTRandom($this->level->getSeed());
 		$this->noiseHills = new NoiseGeneratorPerlin($this->random, 3);
 		$this->noisePatches = new NoiseGeneratorPerlin($this->random, 2);
 		$this->noisePatchesSmall = new NoiseGeneratorPerlin($this->random, 2);
@@ -166,6 +164,7 @@ class NormalGenerator implements NewLevelGenerator{
 			$this->mineshaftGenerator->generate($this->level, $blockIds, $chunkX, $chunkZ);
 		}
 		$this->level->level->setChunkData($chunkX, $chunkZ, $blockIds, $blockMetas);
+		$this->level->level->recalcHeightmap($chunkX, $chunkZ);
 	}
 	
 	public function populateChunk($chunkX, $chunkZ){
@@ -175,7 +174,6 @@ class NormalGenerator implements NewLevelGenerator{
 		$this->level->level->setPopulated($chunkX, $chunkZ, true);
 
 		$this->random->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
-		$this->mtrandom->setSeed(0xdeadbeef ^ ($chunkX << 8) ^ $chunkZ ^ $this->level->getSeed());
 		
 		$biomeID = $this->level->level->getBiomeId($chunkX*16, $chunkZ*16);
 		$biome = BiomeSelector::get($biomeID);
@@ -186,12 +184,12 @@ class NormalGenerator implements NewLevelGenerator{
 		}
 
 		if(self::HIDDEN_FEATURES) {
-			$this->mineshaftGenerator->generateStructuresInChunk($this->level, $this->mtrandom, $chunkX, $chunkZ);
+			$this->mineshaftGenerator->generateStructuresInChunk($this->level, $this->random, $chunkX, $chunkZ);
 			for ($i = 0; $i < 8; ++$i){
-				$x = $blockX + $this->mtrandom->nextInt(16) + 8;
-				$y = $this->mtrandom->nextInt(128);
-				$z = $blockZ + $this->mtrandom->nextInt(16) + 8;
-				if(Feature::$DUNGEON->place($this->level, $this->mtrandom, $x, $y, $z)){
+				$x = $blockX + $this->random->nextInt(16) + 8;
+				$y = $this->random->nextInt(128);
+				$z = $blockZ + $this->random->nextInt(16) + 8;
+				if(Feature::$DUNGEON->place($this->level, $this->random, $x, $y, $z)){
 					ConsoleAPI::debug("Placed Dungeon at $x $y $z");
 				}
 			}
