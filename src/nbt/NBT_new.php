@@ -72,7 +72,7 @@ class NBT_new{
 	}
 
 	public function feof(){
-		return !isset($this->buffer{$this->offset});
+		return !isset($this->buffer[$this->offset]);
 	}
 
 	public function __construct($endianness = self::LITTLE_ENDIAN){
@@ -112,52 +112,52 @@ class NBT_new{
 
 	public function readTag(){
 		switch($this->getByte()){
-			case NBT::TAG_Byte:
+			case NBT_new::TAG_Byte:
 				$tag = new Byte($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Short:
+			case NBT_new::TAG_Short:
 				$tag = new Short($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Int:
+			case NBT_new::TAG_Int:
 				$tag = new IntTag($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Long:
+			case NBT_new::TAG_Long:
 				$tag = new Long($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Float:
+			case NBT_new::TAG_Float:
 				$tag = new FloatTag($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Double:
+			case NBT_new::TAG_Double:
 				$tag = new Double($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_ByteArray:
+			case NBT_new::TAG_ByteArray:
 				$tag = new ByteArray($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_String:
+			case NBT_new::TAG_String:
 				$tag = new StringTag($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Enum:
+			case NBT_new::TAG_Enum:
 				$tag = new EnumTag($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_Compound:
+			case NBT_new::TAG_Compound:
 				$tag = new Compound($this->getString());
 				$tag->read($this);
 				break;
-			case NBT::TAG_IntArray:
+			case NBT_new::TAG_IntArray:
 				$tag = new IntArray($this->getString());
 				$tag->read($this);
 				break;
 
-			case NBT::TAG_End: //No named tag
+			case NBT_new::TAG_End: //No named tag
 			default:
 				$tag = new End;
 				break;
